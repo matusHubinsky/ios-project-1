@@ -1,0 +1,21 @@
+#!/bin/bash
+
+export POSIXLY_CORRECT=yes
+
+print_help()
+{
+    echo "mole -h"
+    echo "mole [-g GROUP] FILE"
+    echo "mole [-m] [FILTERS] [DIRECTORY]"
+    echo "mole list [FILTERS] [DIRECTORY]"   
+}
+
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+        -h)
+            print_help
+            exit 0
+            ;;
+    esac
+done
