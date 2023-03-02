@@ -2,7 +2,7 @@
 
 export POSIXLY_CORRECT=yes
 
-print_help()
+print_help() 
 {
     echo "mole -h"
     echo "mole [-g GROUP] FILE"
@@ -10,12 +10,58 @@ print_help()
     echo "mole list [FILTERS] [DIRECTORY]"   
 }
 
+group()
+{
+    echo "Open file"
+    # OPEN_RC FILE
+    echo "Add to the GROUP"
+}
+
+FILE=""
+GROUP=""
+FILTER=""
+
+# check if utillity realpath is available
+if ! [ -x "$(command -v realpath)" ]
+then
+    echo "<realpath> could not be found"
+    exit 1
+fi
+
+# look for MOLE_RC
+PATH=""
+if [ -e "MOLE_RC" ]; then
+    echo "MOLE_RC not found!"
+    exit 1
+else 
+    echo "MOLE_RC found"
+fi
+
+# look for EDITOR, VISUAL, vi
+EDITOR=""
+if [ -e "EDITOR" ]; then 
+    EDITOR="EDITOR"    
+elif [ -e "VISUAL" ]; then
+    EDITOR="VISUAL"
+else
+    EDITOR="vi"
+fi
+
 while [ "$#" -gt 0 ]
 do
     case "$1" in
         -h)
             print_help
             exit 0
+            ;;
+        -g)
+            FILTER=$1
+            GROUP=$2
+		    FILE=$3
+            shift
+		    shift
+            shift
+            group
             ;;
     esac
 done
