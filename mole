@@ -12,9 +12,7 @@ print_help()
 
 group()
 {
-    echo "Open file"
-    # OPEN_RC FILE
-    echo "Add to the GROUP"
+    echo $FILE $GROUP >> $MOLE_RC
 }
 
 FILE=""
@@ -28,13 +26,13 @@ then
     exit 1
 fi
 
-# look for MOLE_RC
+# look for MOLE_RC, export MOLE_RC=$HOME/.config/molerc
 PATH=""
-if [ -e "MOLE_RC" ]; then
-    echo "MOLE_RC not found!"
-    exit 1
+if [ -e $MOLE_RC ]; then
+    echo $MOLE_RC 
 else 
-    echo "MOLE_RC found"
+    echo $MOLE_RC
+    exit 1
 fi
 
 # look for EDITOR, VISUAL, vi
