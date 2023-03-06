@@ -8,15 +8,32 @@ print_help()
     echo "mole [-g GROUP] FILE"
     echo "mole [-m] [FILTERS] [DIRECTORY]"
     echo "mole list [FILTERS] [DIRECTORY]"   
+    echo "mole secret-log [-b DATE] [-a DATE] [DIRECTORY1 [DIRECTORY2 [...]]]"
 }
 
 group()
 {
-    echo $FILE $GROUP >> $MOLE_RC
+    echo "$FILE|$GROUP|$DATE"  >> $MOLE_RC
 }
 
+open () 
+{
+    awk -v, -F, '{|, s}'
+}
+
+editor()
+{
+    echo $EDITOR $FILE
+}
+
+list () 
+{
+    echo "list"
+}
+
+DATE=$(date)
 FILE=""
-GROUP=""
+GROUP="-"
 FILTER=""
 
 # check if utillity realpath is available
@@ -28,10 +45,11 @@ fi
 
 # look for MOLE_RC, export MOLE_RC=$HOME/.config/molerc
 PATH=""
-if [ -e $MOLE_RC ]; then
-    echo $MOLE_RC 
+if [ -n $MOLE_RC ]; then
+    if [ ! -e $MOLE_RC ]; then
+        touch $MOLE_RC
+    fi
 else 
-    echo $MOLE_RC
     exit 1
 fi
 
@@ -45,8 +63,7 @@ else
     EDITOR="vi"
 fi
 
-while [ "$#" -gt 0 ]
-do
+while [ "$#" -gt 0 ]; do
     case "$1" in
         -h)
             print_help
@@ -57,9 +74,31 @@ do
             GROUP=$2
 		    FILE=$3
             shift
-		    shift
+            shift
             shift
             group
             ;;
+        -m)
+            FILTERS=$1
+            DIRECTORY=$2
+            shift
+            shift
+            shift
+            editor
+            ;;  
+        -list)
+            FILTERS=$1
+            DIRECTORY=$2
+            shift
+            shift
+            list
+            ;;
+        -)
+            echo "nothing, just open"
+            exit 0
+            ;;
+        *)
+            echo "Unknown command"
+            exit 1
     esac
 done
