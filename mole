@@ -4,16 +4,22 @@ export POSIXLY_CORRECT=yes
 
 print_help() 
 {
-    echo "mole -h"
-    echo "mole [-g GROUP] FILE"
-    echo "mole [-m] [FILTERS] [DIRECTORY]"
-    echo "mole list [FILTERS] [DIRECTORY]"   
-    echo "mole secret-log [-b DATE] [-a DATE] [DIRECTORY1 [DIRECTORY2 [...]]]"
+    echo " "
+    echo "COMANDS:"
+    echo "  mole list [FILTERS] [DIRECTORY]     opens certain file"   
+    echo " "
+    echo "FILTERS:"
+    echo "  [-h]                                prints help"
+    echo "  [-g GROUP1[,GROUP2[,...]]] FILE     add file to a GROUP"
+    echo "  [-m] [FILTERS] [DIRECTORY]          opens the file thah was edited most frequently"
+    echo "  [-a DATE] YYYY-MM-DD                lists all the files edited after certain date"
+    echo "  [-b DATE] YYYY-MM-DD                lists all the files edited begore certain date"
+    echo " "
 }
 
 group()
 {
-    echo "$FILE|$GROUP|$DATE"  >> $MOLE_RC
+    echo "$FILE|$GROUP|$DATE|$EPOCHSECONDS"  >> $MOLE_RC
 }
 
 open () 
@@ -26,15 +32,40 @@ editor()
     echo $EDITOR $FILE
 }
 
-list () 
+list() 
 {
     echo "list"
 }
 
-DATE=$(date)
+date_before() 
+{
+    awk -v date="$DATE_BEFORE" 'BEGIN{FS = "|" ; split(date, after, "-")} 
+    {
+        split($3, cur, "-");
+        if (cur[1] < after[1]) print
+        else if (cur[2] < after[2]) print 
+        else if (cur[3] < after[3]) print
+    } 
+    END{}'
+}
+
+date_after() 
+{
+    awk -v date="$DATE_AFTER" 'BEGIN{FS = "|" ; split(date, after, "-")} 
+    {
+        split($3, cur, "-");
+        if (cur[1] > after[1]) print
+        else if (cur[2] > after[2]) print 
+        else if (cur[3] > after[3]) print
+    } 
+    END{}'
+}
+
+DATE=$(date +%F_%H-%M-%S)
 FILE=""
 GROUP="-"
 FILTER=""
+DIRECTORY=""
 
 # check if utillity realpath is available
 if ! [ -x "$(command -v realpath)" ]
@@ -44,10 +75,9 @@ then
 fi
 
 # look for MOLE_RC, export MOLE_RC=$HOME/.config/molerc
-PATH=""
-if [ -n $MOLE_RC ]; then
-    if [ ! -e $MOLE_RC ]; then
-        touch $MOLE_RC
+if [ -n "$MOLE_RC" ]; then
+    if [ ! -e "$MOLE_RC" ]; then
+        touch "$MOLE_RC"
     fi
 else 
     exit 1
@@ -79,22 +109,40 @@ while [ "$#" -gt 0 ]; do
             group
             ;;
         -m)
-            FILTERS=$1
+            FILTER=$1
             DIRECTORY=$2
             shift
             shift
             shift
             editor
             ;;  
+        -a)
+            FILTER=$1
+            DATE_AFTER=$2
+            shift
+            shift
+            cat $MOLE_RC | date_after
+            ;;
+        -b)
+            FILTER=$1
+            DATE_BEFORE=$2
+            shift
+            shift
+            cat $MOLE_RC | date_after
+            ;;
         -list)
-            FILTERS=$1
+            FILTER=$1
             DIRECTORY=$2
             shift
             shift
             list
             ;;
+        -secret-log)
+            echo "secret log"
+            ;;
         -)
             echo "nothing, just open"
+            editor
             exit 0
             ;;
         *)
