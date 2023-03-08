@@ -22,15 +22,42 @@ group() {
 }
 
 open() {
-    cat "$MOLE_RC" | date_before | date_after | awk -v, -F, '{|, s}'
+    echo "$FILE|-|$DATE" >>"$MOLE_RC"
 }
 
 editor() {
     echo $EDITOR $FILE
+}   
+
+parse() {
+    cat "$MOLE_RC" | date_before | date_after | most | awk -F '|' '{print $1" "$2" "$3}'
 }
 
 list() {
-    cat "$MOLE_RC" | date_before | date_after
+    cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1" "$2" "$3}'
+}
+
+most() {
+    # Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
+    # Pokud nebyl zadán adresář, předpokládá se aktuální adresář.    
+    if [ -n "$DIRECTORY" ]; then
+        echo "vonkajší"
+    else 
+        echo "aktualny"
+    fi
+
+    if [ -e $FILTER ]; then
+        # Pokud byl zadán argument -m, tak skript vybere soubor, který byl pomocí skriptu otevřen (editován) nejčastěji.
+        # Pokud bude při použití přepínače -m nalezeno více souborů se stejným maximálním počtem otevření, může mole vybrat kterýkoliv z nich.
+        echo "najcastejsi"
+        awk 'max < ++c[$0] {max = c[$0]; line = $0} END{print line}'
+    else 
+        # Pokud bylo v daném adresáři editováno skriptem více souborů, vybere se soubor, který byl pomocí skriptu otevřen (editován) jako poslední.
+        awk 'END{print}'
+        echo "posledny"
+    fi
+
+    # Pokud nebyl v daném adresáři otevřen (editován) ještě žádný soubor, případně žádný soubor nevyhovuje zadaným filtrům, jedná se o chybu.
 }
 
 secret_log() {
@@ -98,12 +125,14 @@ while [ "$#" -gt 0 ]; do
         shift
         shift
         group
+        exit 0
         ;;
     -m)
         FILTER=$1
-        DIRECTORY=$2
+        #DIRECTORY=$2
+        #shift
         shift
-        shift
+        COMMAND="mole"
         ;;
     -a)
         FILTER=$1
@@ -118,7 +147,9 @@ while [ "$#" -gt 0 ]; do
         shift
         ;;
     *)
-        echo Error: Unknown Command
+        FILE=$1
+        shift
+        open
         exit 0
         ;;
     esac
@@ -132,7 +163,7 @@ secret-log)
     secret_log
     ;;
 *)
-    echo Error: Unknown Command
+    parse
     exit 0
     ;;
 esac
