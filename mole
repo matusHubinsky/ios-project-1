@@ -2,11 +2,12 @@
 
 export POSIXLY_CORRECT=yes
 
-print_help() 
-{
+print_help() {
+    echo "Usage: "
+    echo " mole [FILTERS] [DIRECTORY]"
     echo " "
     echo "COMANDS:"
-    echo "  mole list [FILTERS] [DIRECTORY]     opens certain file"   
+    echo "  mole list [FILTERS] [DIRECTORY]     opens certain file"
     echo " "
     echo "FILTERS:"
     echo "  [-h]                                prints help"
@@ -14,31 +15,29 @@ print_help()
     echo "  [-m] [FILTERS] [DIRECTORY]          opens the file thah was edited most frequently"
     echo "  [-a DATE] YYYY-MM-DD                lists all the files edited after certain date"
     echo "  [-b DATE] YYYY-MM-DD                lists all the files edited begore certain date"
-    echo " "
 }
 
-group()
-{
-    echo "$FILE|$GROUP|$DATE|$EPOCHSECONDS"  >> $MOLE_RC
+group() {
+    echo "$FILE|$GROUP|$DATE" >>"$MOLE_RC"
 }
 
-open () 
-{
-    awk -v, -F, '{|, s}'
+open() {
+    cat "$MOLE_RC" | date_before | date_after | awk -v, -F, '{|, s}'
 }
 
-editor()
-{
+editor() {
     echo $EDITOR $FILE
 }
 
-list() 
-{
-    echo "list"
+list() {
+    cat "$MOLE_RC" | date_before | date_after
 }
 
-date_before() 
-{
+secret_log() {
+    echo "secret log"
+}
+
+date_before() {
     awk -v date="$DATE_BEFORE" 'BEGIN{FS = "|" ; split(date, after, "-")} 
     {
         split($3, cur, "-");
@@ -49,8 +48,7 @@ date_before()
     END{}'
 }
 
-date_after() 
-{
+date_after() {
     awk -v date="$DATE_AFTER" 'BEGIN{FS = "|" ; split(date, after, "-")} 
     {
         split($3, cur, "-");
@@ -66,10 +64,10 @@ FILE=""
 GROUP="-"
 FILTER=""
 DIRECTORY=""
+COMMAND=""
 
 # check if utillity realpath is available
-if ! [ -x "$(command -v realpath)" ]
-then
+if ! [ -x "$(command -v realpath)" ]; then
     echo "<realpath> could not be found"
     exit 1
 fi
@@ -79,14 +77,15 @@ if [ -n "$MOLE_RC" ]; then
     if [ ! -e "$MOLE_RC" ]; then
         touch "$MOLE_RC"
     fi
-else 
+else
+    echo "MOLE_RC can't be found"
     exit 1
 fi
 
 # look for EDITOR, VISUAL, vi
 EDITOR=""
-if [ -e "EDITOR" ]; then 
-    EDITOR="EDITOR"    
+if [ -e "EDITOR" ]; then
+    EDITOR="EDITOR"
 elif [ -e "VISUAL" ]; then
     EDITOR="VISUAL"
 else
@@ -95,58 +94,57 @@ fi
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        -h)
-            print_help
-            exit 0
-            ;;
-        -g)
-            FILTER=$1
-            GROUP=$2
-		    FILE=$3
-            shift
-            shift
-            shift
-            group
-            ;;
-        -m)
-            FILTER=$1
-            DIRECTORY=$2
-            shift
-            shift
-            shift
-            editor
-            ;;  
-        -a)
-            FILTER=$1
-            DATE_AFTER=$2
-            shift
-            shift
-            cat $MOLE_RC | date_after
-            ;;
-        -b)
-            FILTER=$1
-            DATE_BEFORE=$2
-            shift
-            shift
-            cat $MOLE_RC | date_after
-            ;;
-        -list)
-            FILTER=$1
-            DIRECTORY=$2
-            shift
-            shift
-            list
-            ;;
-        -secret-log)
-            echo "secret log"
-            ;;
-        -)
-            echo "nothing, just open"
-            editor
-            exit 0
-            ;;
-        *)
-            echo "Unknown command"
-            exit 1
+    secret-log | list)
+        COMMAND=$1
+        shift
+        ;;
+    -h)
+        print_help
+        exit 0
+        ;;
+    -g)
+        FILTER=$1
+        GROUP=$2
+        FILE=$3
+        shift
+        shift
+        shift
+        group
+        ;;
+    -m)
+        FILTER=$1
+        DIRECTORY=$2
+        shift
+        shift
+        ;;
+    -a)
+        FILTER=$1
+        DATE_AFTER=$2
+        shift
+        shift
+        ;;
+    -b)
+        FILTER=$1
+        DATE_BEFORE=$2
+        shift
+        shift
+        ;;
+    *)
+        echo Error: Unknown Command
+        exit 0
+        ;;
     esac
 done
+
+case "$COMMAND" in
+list)
+    list
+    ;;
+secret-log)
+    secret_log
+    ;;
+*)
+    echo Error: Unknown Command
+    exit 0
+    ;;
+esac
