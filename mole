@@ -92,6 +92,8 @@ else
     exit 1
 fi
 
+# kontrola či je niečo na stdin
+[ ! -z $1 ] || exit 1
 # kontrola či sa jedná o príkaz alebo otvorenie súbora
 if [ $1 == "list" ] || [ $1 == "secret-log" ]; then
     COMMAND=$1
