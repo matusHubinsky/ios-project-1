@@ -1,47 +1,43 @@
 #!/bin/bash
 
 export POSIXLY_CORRECT=yes
+export LC_NUMERIC=en_US.UTF-8 #C
 
 print_help() {
     echo "Usage: "
-    echo " mole [FILTERS] [DIRECTORY]"
+    echo "      mole [-h]"
+    echo "      mole [FILTERS] [DIRECTORY]"
     echo " "
-    echo "COMANDS:"
-    echo "  mole list [FILTERS] [DIRECTORY]     opens certain file"
+    echo "COMMANDS:"
+    echo "      mole list [FILTERS] [DIRECTORY]     opens certain file"
     echo " "
     echo "FILTERS:"
-    echo "  [-h]                                prints help"
-    echo "  [-g GROUP1[,GROUP2[,...]]] FILE     add file to a GROUP"
-    echo "  [-m] [FILTERS] [DIRECTORY]          opens the file thah was edited most frequently"
-    echo "  [-a DATE] YYYY-MM-DD                lists all the files edited after certain date"
-    echo "  [-b DATE] YYYY-MM-DD                lists all the files edited begore certain date"
+    echo "      [-h]                                prints help"
+    echo "      [-g GROUP1[,GROUP2[,...]]] FILE     add file to a GROUP"
+    echo "      [-m] [FILTERS] [DIRECTORY]          opens the file thah was edited most frequently"
+    echo "      [-a DATE] YYYY-MM-DD                lists all the files edited after certain date"
+    echo "      [-b DATE] YYYY-MM-DD                lists all the files edited begore certain date"
 }
 
-group() {
-    echo "$FILE|$GROUP|$DATE" >>"$MOLE_RC"
+error() {
+    >&2 echo "error"
+    exit 1
 }
 
-open() {
-    echo "$FILE|-|$DATE" >>"$MOLE_RC"
-}
-
-editor() {
-    echo $EDITOR $FILE
-}   
-
-parse() {
-    cat "$MOLE_RC" | date_before | date_after | most | awk -F '|' '{print $1" "$2" "$3}'
-}
-
-list() {
-    cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1" "$2" "$3}'
+check() {
+    read $OUTPUT
+    if [ -n "$OUTPUT" ]; then 
+        echo "$OUTPUT"
+    else 
+        error
+    fi  
 }
 
 most() {
     # Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
-    # Pokud nebyl zadán adresář, předpokládá se aktuální adresář.    
     if [ -n "$DIRECTORY" ]; then
         echo "vonkajší"
+    # Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
     else 
         echo "aktualny"
     fi
@@ -80,6 +76,7 @@ GROUP="-"
 FILTER=""
 DIRECTORY=""
 COMMAND=""
+OUTPUT=""
 
 # check if utillity realpath is available
 if ! [ -x "$(command -v realpath)" ]; then
@@ -97,73 +94,67 @@ else
     exit 1
 fi
 
-# look for EDITOR, VISUAL, vi
-EDITOR=""
-if [ -e "EDITOR" ]; then
-    EDITOR="EDITOR"
-elif [ -e "VISUAL" ]; then
-    EDITOR="VISUAL"
-else
-    EDITOR="vi"
-fi
-
-while [ "$#" -gt 0 ]; do
-    case "$1" in
-    secret-log | list)
-        COMMAND=$1
-        shift
-        ;;
-    -h)
-        print_help
-        exit 0
-        ;;
-    -g)
-        FILTER=$1
-        GROUP=$2
-        FILE=$3
-        shift
-        shift
-        shift
-        group
-        exit 0
-        ;;
-    -m)
-        FILTER=$1
-        #DIRECTORY=$2
-        #shift
-        shift
-        COMMAND="mole"
-        ;;
-    -a)
-        FILTER=$1
-        DATE_AFTER=$2
-        shift
-        shift
-        ;;
-    -b)
-        FILTER=$1
-        DATE_BEFORE=$2
-        shift
-        shift
-        ;;
-    *)
-        FILE=$1
-        shift
-        open
-        exit 0
-        ;;
+# set -x
+while getopts ":mhg:ab" o 
+do    
+    case "${o}" in
+        h)
+            print_help
+            exit 0
+            ;;
+        g)
+            FILTER=$1
+            GROUP=$2
+            FILE=$3
+            shift
+            shift
+            shift
+            echo "$FILE|$GROUP|$DATE" >> "$MOLE_RC"
+            exit 0
+            ;;
+        m)
+            FILTER=$1
+            DIRECTORY=$2            
+            shift
+            shift
+            ;;
+        a)
+            FILTER=$1
+            DATE_AFTER=$2
+            shift
+            shift
+            ;;
+        b)
+            FILTER=$1
+            DATE_BEFORE=$2
+            shift
+            shift
+            ;;
+        *)
+            FILE=$1
+            echo "$FILE"
+            open
+            exit 0
+            ;;
     esac
 done
 
-case "$COMMAND" in
-list)
-    list
-    ;;
-secret-log)
-    secret_log
-    ;;
-*)
-    parse
-    exit 0
-    ;;
+shift $(($OPTIND -1))
+case "$1" in
+    list)   
+        cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1" "$2" "$3}' | most
+        ;;
+    secret-log)
+        secret_log
+        ;;
+    open)
+        echo "$FILE|-|$DATE" >>"$MOLE_RC"
+        ;;
+    *)
+        FILE=$1
+        [ -n "$FILE" ] || error
+        eval "$EDITOR" "$FILE"
+        ;;
 esac
+
+exit 0
