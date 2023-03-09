@@ -95,7 +95,7 @@ fi
 if [ $1 == "list" ] || [ $1 == "secret-log" ]; then
     COMMAND=$1
     echo "command: $COMMAND" 
-    shift $(($OPTIND -1))
+    shift
 else
     FILE=$1
     [ -n "$FILE" ] || error
@@ -115,29 +115,18 @@ fi
 while getopts "g:a:b:mh" args 
 do    
     case "${args}" in
-        mole | secret-log)
-            COMMAND=$1
-            shift
-            ;;
         h)
             print_help
             exit 0
             ;;
         g)
-            FILTER=$1
-            GROUP=$2
-            FILE=$3
-            shift
-            shift
-            shift
+            GROUP=${OPTARG}
+            FILE=${OPTARG}
             echo "$FILE|$GROUP|$DATE" >> "$MOLE_RC"
             exit 0
             ;;
         m)
-            FILTER=$1
-            DIRECTORY=$2            
-            shift
-            shift
+            DIRECTORY=${OPTARG}            
             # Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
             if [ -n "$DIRECTORY" ]; then
                 :
@@ -148,19 +137,11 @@ do
                 # echo "aktualny"
             fi
             ;;
-        a)
-            echo "OPTARG: ${OPTARG}"
-            FILTER=$1
-            DATE_AFTER=$2
-            shift
-            shift
+        a)   
+            DATE_AFTER=${OPTARG}
             ;;
         b)
-            echo "OPTARG: "
-            FILTER=$1
-            DATE_BEFORE=$2
-            shift
-            shift
+            DATE_BEFORE=${OPTARG}
             ;;
         *)
             echo "some weird args..."
