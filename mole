@@ -1,7 +1,12 @@
 #!/bin/bash
+#   author: Matus Hubinsky 
+#   xlogin: xhubin04
+#   date:   19.03.2023
+
+export MOLE_RC=$HOME/.config/molerc
 
 export POSIXLY_CORRECT=yes
-export LC_NUMERIC=en_US.UTF-8 #C
+export LC_NUMERIC=en_US.UTF-8
 
 print_help() {
     echo "Usage: "
@@ -94,10 +99,10 @@ else
     exit 1
 fi
 
-# set -x
-while getopts ":mhg:ab" o 
+set -x
+while getopts ":mhg:a:b:" args 
 do    
-    case "${o}" in
+    case "${args}" in
         h)
             print_help
             exit 0
@@ -119,6 +124,7 @@ do
             shift
             ;;
         a)
+            echo "OPTARG: ${OPTARG}"
             FILTER=$1
             DATE_AFTER=$2
             shift
