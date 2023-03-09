@@ -7,6 +7,7 @@ export MOLE_RC=$HOME/.config/molerc
 
 export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
+export LC_COLLATE=C
 
 print_help() {
     echo "Usage: "
@@ -30,32 +31,23 @@ error() {
 }
 
 check() {
-    read $OUTPUT
-    if [ -n "$OUTPUT" ]; then 
-        echo "$OUTPUT"
-    else 
-        error
-    fi  
+    head=$(dd bs=1 count=1 2>/dev/null; echo a)
+    head=${head%a}
+    if [ "x$head" != x"" ]; then
+        { printf %s "$head"; cat; } | "$@"
+    fi
 }
 
 most() {
-    # Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
-    if [ -n "$DIRECTORY" ]; then
-        echo "vonkajší"
-    # Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
-    else 
-        echo "aktualny"
-    fi
-
-    if [ -e $FILTER ]; then
+    if [ -z "$FILTER" ]; then
         # Pokud byl zadán argument -m, tak skript vybere soubor, který byl pomocí skriptu otevřen (editován) nejčastěji.
         # Pokud bude při použití přepínače -m nalezeno více souborů se stejným maximálním počtem otevření, může mole vybrat kterýkoliv z nich.
-        echo "najcastejsi"
-        awk 'max < ++c[$0] {max = c[$0]; line = $0} END{print line}'
+        echo "najčastejšie"
+        awk 'BEGIN{max < ++c[$0]} {max = c[$0]; line = $0} END{print}'
     else 
         # Pokud bylo v daném adresáři editováno skriptem více souborů, vybere se soubor, který byl pomocí skriptu otevřen (editován) jako poslední.
+        echo "posledný"
         awk 'END{print}'
-        echo "posledny"
     fi
 
     # Pokud nebyl v daném adresáři otevřen (editován) ještě žádný soubor, případně žádný soubor nevyhovuje zadaným filtrům, jedná se o chybu.
@@ -99,10 +91,34 @@ else
     exit 1
 fi
 
-set -x
-while getopts ":mhg:a:b:" args 
+# kontrola či sa jedná o príkaz alebo otvorenie súbora
+if [ $1 == "list" ] || [ $1 == "secret-log" ]; then
+    COMMAND=$1
+    echo "command: $COMMAND" 
+    shift $(($OPTIND -1))
+else
+    FILE=$1
+    [ -n "$FILE" ] || error
+    
+    # look for EDITOR, VISUAL, vi
+    if [ -e "EDITOR" ]; then
+        EDITOR="EDITOR"
+    elif [ -e "VISUAL" ]; then
+        EDITOR="VISUAL"
+    else
+        EDITOR="vi"
+    fi
+    eval "$EDITOR" "$FILE"
+fi
+
+# set -x
+while getopts "g:a:b:mh" args 
 do    
     case "${args}" in
+        mole | secret-log)
+            COMMAND=$1
+            shift
+            ;;
         h)
             print_help
             exit 0
@@ -122,6 +138,15 @@ do
             DIRECTORY=$2            
             shift
             shift
+            # Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
+            if [ -n "$DIRECTORY" ]; then
+                :
+                # echo "vonkajší"
+            # Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
+            else
+                :
+                # echo "aktualny"
+            fi
             ;;
         a)
             echo "OPTARG: ${OPTARG}"
@@ -131,35 +156,28 @@ do
             shift
             ;;
         b)
+            echo "OPTARG: "
             FILTER=$1
             DATE_BEFORE=$2
             shift
             shift
             ;;
         *)
-            FILE=$1
-            echo "$FILE"
-            open
-            exit 0
+            echo "some weird args..."
+            exit 1
             ;;
     esac
 done
 
-shift $(($OPTIND -1))
-case "$1" in
+case "$COMMAND" in
     list)   
-        cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1" "$2" "$3}' | most
+        # cat $MOLE_RC | awk -F "|" 'BEGIN{max = 0} {if length($1) > max: max = length($1)} END{print max}'
+        # echo "$MAX"
+        # cat $MOLE_RC | date_before | date_after | most | sort | uniq -c | awk -F '|' '{print $1" "$2" "$3}'
+        cat $MOLE_RC | awk -F "|" '{printf("%1s:%10s\n", $1, $2)}' | uniq -u | sort 
         ;;
     secret-log)
         secret_log
-        ;;
-    open)
-        echo "$FILE|-|$DATE" >>"$MOLE_RC"
-        ;;
-    *)
-        FILE=$1
-        [ -n "$FILE" ] || error
-        eval "$EDITOR" "$FILE"
         ;;
 esac
 
