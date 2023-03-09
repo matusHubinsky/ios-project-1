@@ -112,7 +112,7 @@ else
     eval "$EDITOR" "$FILE"
 fi
 
-# set -x
+set -x
 while getopts "g:a:b:mh" args 
 do    
     case "${args}" in
@@ -141,9 +141,17 @@ do
             ;;
         a)   
             DATE_AFTER=${OPTARG}
+            if [[ ! "$DATE_AFTER" =~ ^[0-9]{4}-[0-1][0-9]-[0-3][0-9]$ ]]; then
+                >&2 echo "Date $DATE_AFTER is not in YYYY-MM-DD format"
+                exit 1
+            fi
             ;;
         b)
             DATE_BEFORE=${OPTARG}
+            if [[ ! "$DATE_BEFORE" =~ ^[0-9]{4}-[0-1][0-9]-[0-3][0-9]$ ]]; then
+                >&2 echo "Date $DATE_AFTER is not in YYYY-MM-DD format"
+                exit 1
+            fi
             ;;
         *)
             echo "some weird args..."
