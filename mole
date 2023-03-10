@@ -93,9 +93,9 @@ else
 fi
 
 # kontrola či je niečo na stdin
-[ ! -z $1 ] || exit 1
+[ -n "$1" ] || exit 1
 # kontrola či sa jedná o príkaz alebo otvorenie súbora
-if [ $1 == "list" ] || [ $1 == "secret-log" ]; then
+if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
     COMMAND=$1
     echo "command: $COMMAND" 
     shift
@@ -164,8 +164,8 @@ done
 
 case "$COMMAND" in
     list)   
-        cat $MOLE_RC | date_before | date_after | awk -F '|' '{print $1": "$2}' | sort -u | column -t -o " "
-        # cat $MOLE_RC | most | sort -u | awk -F '|' '{print $1" "$2" "$3}'
+        cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1": "$2}' | sort -u | column -t -o " "
+        # cat "$MOLE_RC" | most | sort -u | awk -F '|' '{print $1" "$2" "$3}'
         ;;
     secret-log)
         secret_log
