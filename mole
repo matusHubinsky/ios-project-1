@@ -95,7 +95,7 @@ else
 fi
 
 # kontrola či je niečo na stdin
-[ -n "$1" ] || exit 1
+[ -n "$1" ] || error
 # kontrola či sa jedná o príkaz alebo otvorenie súbora
 if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
     COMMAND=$1
@@ -114,6 +114,8 @@ else
         EDITOR="vi"
     fi
     eval "$EDITOR" "$FILE"
+    echo $?
+    exit $?
 fi
 
 # set -x
@@ -175,5 +177,4 @@ secret-log)
     ;;
 esac
 
-echo $?
-exit $?
+
