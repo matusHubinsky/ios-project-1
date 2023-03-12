@@ -166,15 +166,26 @@ while getopts "g:a:b:mh" args; do
 done
 
 case "$COMMAND" in
-list)
+list) # FILE1:  grp1,grp2
     cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1": "$2}' | sort -u | column -t -o " "
     # cat "$MOLE_RC" | most | sort -u | awk -F '|' '{print $1" "$2" "$3}'
-    exit 0
     ;;
-secret-log)
-    cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1": "$2}' | sort -u
-    exit 0
+secret-log) # FILEPATH;DATETIME_1;DATETIME_2;
+    #TODO: realna cesta realpath
+    #TODO: čas otvorenia
+    DATETIME=$(date +%F_%H-%M-%S)
+    cat "$MOLE_RC" | date_before | date_after | awk 'BEGIN{FS="|"} {
+            if (length(arr[$1]) == 0) 
+                arr[$1] = $3;
+            else
+                arr[$1] = arr[$1]","$3;
+        } END{ 
+            for (i in arr)
+                printf i" : "arr[i]"\n"
+        }' | sort
+
+    # /home/$USER/.mole/log_$USER_$DATETIME.bz2
     ;;
 esac
 
-
+exit 0
