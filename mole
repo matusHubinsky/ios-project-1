@@ -1,5 +1,5 @@
 #!/bin/bash
-#   author: Matus Hubinsky 
+#   author: Matus Hubinsky
 #   xlogin: xhubin04
 #   date:   19.03.2023
 
@@ -26,15 +26,21 @@ print_help() {
 }
 
 error() {
-    >&2 echo "error"
+    echo >&2 "error"
     exit 1
 }
 
 check() {
-    head=$(dd bs=1 count=1 2>/dev/null; echo a)
+    head=$(
+        dd bs=1 count=1 2>/dev/null
+        echo a
+    )
     head=${head%a}
     if [ "x$head" != x"" ]; then
-        { printf %s "$head"; cat; } | "$@"
+        {
+            printf %s "$head"
+            cat
+        } | "$@"
     fi
 }
 
@@ -45,17 +51,13 @@ most() {
         echo "najčastejšie"
         awk 'BEGIN{max < ++c[$0]} {max = c[$0]; line = $0} END{print}'
         # uniq -c | sort -bgr
-    else 
+    else
         # Pokud bylo v daném adresáři editováno skriptem více souborů, vybere se soubor, který byl pomocí skriptu otevřen (editován) jako poslední.
         echo "posledný"
         awk 'END{print}'
     fi
 
     # Pokud nebyl v daném adresáři otevřen (editován) ještě žádný soubor, případně žádný soubor nevyhovuje zadaným filtrům, jedná se o chybu.
-}
-
-secret_log() {
-    echo "secret log"
 }
 
 date_before() {
@@ -68,7 +70,7 @@ date_after() {
 
 DATE=$(date +%F_%H-%M-%S)
 DATE_AFTER="0000-00-00"
-DATE_BEFORE="9999-99-99" 
+DATE_BEFORE="9999-99-99"
 FILE=""
 GROUP="-"
 FILTER=""
@@ -97,12 +99,12 @@ fi
 # kontrola či sa jedná o príkaz alebo otvorenie súbora
 if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
     COMMAND=$1
-    echo "command: $COMMAND" 
+    echo "command: $COMMAND"
     shift
 else
     FILE=$1
     [ -n "$FILE" ] || error
-    
+
     # look for EDITOR, VISUAL, vi
     if [ -e "EDITOR" ]; then
         EDITOR="EDITOR"
@@ -114,62 +116,64 @@ else
     eval "$EDITOR" "$FILE"
 fi
 
-set -x
-while getopts "g:a:b:mh" args 
-do    
+# set -x
+while getopts "g:a:b:mh" args; do
     case "${args}" in
-        h)
-            print_help
-            exit 0
-            ;;
-        g)  
-            # for i in $(echo "$group" | tr "," "\n")
-            GROUP=${OPTARG}
-            FILE=${OPTARG}
-            echo "$FILE|$GROUP|$DATE" >> "$MOLE_RC"
-            exit 0
-            ;;
-        m)
-            DIRECTORY=${OPTARG}            
-            # Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
-            if [ -n "$DIRECTORY" ]; then
-                :
-                # echo "vonkajší"
-            # Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
-            else
-                :
-                # echo "aktualny"
-            fi
-            ;;
-        a)   
-            DATE_AFTER=${OPTARG}
-            if [[ ! "$DATE_AFTER" =~ ^[0-9]{4}-[0-1][0-9]-[0-3][0-9]$ ]]; then
-                >&2 echo "Date $DATE_AFTER is not in YYYY-MM-DD format"
-                exit 1
-            fi
-            ;;
-        b)
-            DATE_BEFORE=${OPTARG}
-            if [[ ! "$DATE_BEFORE" =~ ^[0-9]{4}-[0-1][0-9]-[0-3][0-9]$ ]]; then
-                >&2 echo "Date $DATE_AFTER is not in YYYY-MM-DD format"
-                exit 1
-            fi
-            ;;
-        *)
-            echo "some weird args..."
+    h)
+        print_help
+        exit 0
+        ;;
+    g)
+        # for i in $(echo "$group" | tr "," "\n")
+        GROUP=${OPTARG}
+        FILE=${OPTARG}
+        echo "$FILE|$GROUP|$DATE" >>"$MOLE_RC"
+        exit 0
+        ;;
+    m)
+        DIRECTORY=${OPTARG}
+        # Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
+        if [ -n "$DIRECTORY" ]; then
+            :
+            # echo "vonkajší"
+        # Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
+        else
+            :
+            # echo "aktualny"
+        fi
+        ;;
+    a)
+        DATE_AFTER=${OPTARG}
+        if [[ ! "$DATE_AFTER" =~ ^[0-9]{4}-[0-1][0-9]-[0-3][0-9]$ ]]; then
+            echo >&2 "Date $DATE_AFTER is not in YYYY-MM-DD format"
             exit 1
-            ;;
+        fi
+        ;;
+    b)
+        DATE_BEFORE=${OPTARG}
+        if [[ ! "$DATE_BEFORE" =~ ^[0-9]{4}-[0-1][0-9]-[0-3][0-9]$ ]]; then
+            echo >&2 "Date $DATE_AFTER is not in YYYY-MM-DD format"
+            exit 1
+        fi
+        ;;
+    *)
+        echo "some weird args..."
+        exit 1
+        ;;
     esac
 done
 
 case "$COMMAND" in
-    list)   
-        cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1": "$2}' | sort -u | column -t -o " "
-        # cat "$MOLE_RC" | most | sort -u | awk -F '|' '{print $1" "$2" "$3}'
-        ;;
-    secret-log)
-        secret_log
-        ;;
+list)
+    cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1": "$2}' | sort -u | column -t -o " "
+    # cat "$MOLE_RC" | most | sort -u | awk -F '|' '{print $1" "$2" "$3}'
+    exit 0
+    ;;
+secret-log)
+    cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1": "$2}' | sort -u
+    exit 0
+    ;;
 esac
 
-exit 0
+echo $?
+exit $?
