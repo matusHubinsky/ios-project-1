@@ -105,6 +105,7 @@ if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
     shift
 fi
 
+
 while getopts "g:a:b:mh" args; do
     case "${args}" in
     h)
@@ -119,8 +120,8 @@ while getopts "g:a:b:mh" args; do
         DIRECTORY=${OPTARG}
         # Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
         if [ -n "$DIRECTORY" ]; then
-            :
             # echo "vonkajší"
+            :
         # Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
         else
             :
@@ -137,7 +138,7 @@ while getopts "g:a:b:mh" args; do
     b)
         DATE_BEFORE=${OPTARG}
         if [[ ! "$DATE_BEFORE" =~ ^[0-9]{4}-[0-1][0-9]-[0-3][0-9]$ ]]; then
-            echo >&2 "Date $DATE_AFTER is not in YYYY-MM-DD format"
+            echo >&2 "Date $DATE_BEFORE is not in YYYY-MM-DD format"
             exit 1
         fi
         ;;
@@ -168,6 +169,7 @@ secret-log) # FILEPATH;DATETIME_1;DATETIME_2;
     ;;
 esac
 
+[ ! -z $FILE ] || FILE=$1
 [ -n "$FILE" ] || error
 # look for EDITOR, VISUAL, vi
 if [ -e "EDITOR" ]; then
