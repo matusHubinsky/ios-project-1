@@ -25,37 +25,36 @@ print_help() {
     echo "      [-b DATE] YYYY-MM-DD                lists all the files edited begore certain date"
 }
 
-error() {
-    exit 1
+check() {
+    [ $(wc -c) -gt "0" ]; echo "error: no files!" >> /dev/stderr; exit 1;
 }
 
-check() {
-    head=$(
-        dd bs=1 count=1 2>/dev/null
-        echo a
-    )
-    head=${head%a}
-    if [ "x$head" != x"" ]; then
-        {
-            printf %s "$head"
-            cat
-        } | "$@"
+open() {
+    # look for EDITOR, VISUAL, vi
+    if [ -e "EDITOR" ]; then
+        EDITOR="EDITOR"
+    elif [ -e "VISUAL" ]; then
+        EDITOR="VISUAL"
+    else
+        EDITOR="vi"
     fi
+    eval "$EDITOR" "$FILE"
+    log
+    exit $?
 }
 
 most() {
-    if [ -z "$FILTER" ]; then
+    if [ "$FILTER" = "m" ]; then
         # Pokud byl zadán argument -m, tak skript vybere soubor, který byl pomocí skriptu otevřen (editován) nejčastěji.
         # Pokud bude při použití přepínače -m nalezeno více souborů se stejným maximálním počtem otevření, může mole vybrat kterýkoliv z nich.
         # echo "najčastejšie"
         awk 'BEGIN{max < ++c[$0]} {max = c[$0]; line = $0} END{print}'
         # uniq -c | sort -bgr
-    else
         # Pokud bylo v daném adresáři editováno skriptem více souborů, vybere se soubor, který byl pomocí skriptu otevřen (editován) jako poslední.
         # echo "posledný"
-        awk 'END{print}'
+    else
+        awk '{print}'
     fi
-
     # Pokud nebyl v daném adresáři otevřen (editován) ještě žádný soubor, případně žádný soubor nevyhovuje zadaným filtrům, jedná se o chybu.
 }
 
@@ -89,9 +88,11 @@ DIRECTORY=""
 COMMAND=""
 IGNORE=false
 
+# set -x
+
 # check if utillity realpath is available
 if ! [ -x "$(command -v realpath)" ]; then
-    echo "<realpath> could not be found"
+    echo "<realpath> could not be found" >> /dev/stderr
     exit 1
 fi
 
@@ -101,14 +102,15 @@ if [ -n "$MOLE_RC" ]; then
         touch "$MOLE_RC"
     fi
 else
-    echo "MOLE_RC can't be found"
+    echo "MOLE_RC can't be found" >> /dev/stderr
     exit 1
 fi
 
 # kontrola či je niečo na stdin
 [ -n "$1" ] || {
-    cat "$MOLE_RC" | most
-    exit 0
+    FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS="|"} END{print $1}' | check) # uniq -c | sort -bgr |
+    echo "file: $FILE"
+    open
 }
 # kontrola či sa jedná o príkaz alebo otvorenie súbora
 if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
@@ -117,55 +119,73 @@ if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
 fi
 
 # spracovanie argumentov
-while getopts "g:a:b:mhd" args; do
-    case "${args}" in
-    h)
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+    list | secretlog)
+        shift
+        ;;
+    -h)
         print_help
         exit 0
         ;;
-    g)
-        GROUP=${OPTARG}
-        FILE=${OPTARG}
-        [ "$IGNORE" = true ] || {
-            echo >&2 "error: -g and -d can't be used together"
+    -g)
+        FILTERS+=$1
+        GROUP=$2
+        FILE=$3
+        [ "$IGNORE" = false ] || {
+            echo "error: -g and -d can't be used together" >> /dev/stderr
             exit 1
         }
+        shift
+        shift
+        shift
         ;;
-    m)
-        DIRECTORY=${OPTARG}
+    -m)
+        FILTERS+=$1
+        DIRECTORY=$2
         # Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
         if [ -n "$DIRECTORY" ]; then
             # echo "vonkajší"
             :
+            shift
         # Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
         else
             :
-            # echo "aktualny"
         fi
+        FILTER="m"
+        shift
         ;;
-    a)
-        DATE_AFTER=${OPTARG}
+    -a)
+        FILTERS+=$1
+        DATE_AFTER=$2
         date -d "$DATE_AFTER" >/dev/null 2>&1 || {
-            echo >&2 "error: Date $DATE_AFTER is not in YYYY-MM-DD format"
+            echo "error: Date $DATE_AFTER is not in YYYY-MM-DD format" >> /dev/stderr
             exit 1
         }
+        shift
+        shift
         ;;
-    b)
-        DATE_BEFORE=${OPTARG}
+    -b)
+        FILTERS+=$1
+        DATE_BEFORE=$2
         date -d "$DATE_BEFORE" >/dev/null 2>&1 || {
-            echo >&2 "error: Date $DATE_BEFORE is not in YYYY-MM-DD format"
+            echo "error: Date $DATE_BEFORE is not in YYYY-MM-DD format" >> /dev/stderr
             exit 1
         }
+        shift
+        shift
         ;;
-    d)
+    -d)
+        FILTERS+=$1
         IGNORE=true
         [ -z "$GROUP" ] || {
-            echo >&2 "error: -g and -d can't be used together"
+            echo "error: -g and -d can't be used together" >> /dev/stderr
             exit 1
         }
+        shift
         ;;
     *)
-        echo >&2 "error: Unknown argumetns!"
+        echo "error: Unknown argumetns!" >> /dev/stderr
         exit 1
         ;;
     esac
@@ -178,7 +198,7 @@ list)
     exit 0
     ;;
 secret-log)
-    [ -e /home/$USER/.mole ] || mkdir /home/$USER/.mole
+    [ -e /home/"$USER"/.mole ] || mkdir "/home/$USER/.mole"
     cat "$MOLE_RC" | date_before | date_after | awk 'BEGIN{FS="|"} {
             if (length(arr[$4]) == 0) 
                 arr[$4] = $3;
@@ -187,21 +207,11 @@ secret-log)
         } END{ 
             for (i in arr)
                 printf i";"arr[i]"\n"
-        }' | sort | bzip2 -c >/home/$USER/.mole/log_$USER"_"$DATE.bz2
+         }' | sort | bzip2 -c >/home/"$USER"/.mole/log_"$USER""_""$DATE".bz2
     exit 0
     ;;
 esac
 
 # otvorenie súboru
 [ -n "$FILE" ] || FILE=$1
-# look for EDITOR, VISUAL, vi
-if [ -e "EDITOR" ]; then
-    EDITOR="EDITOR"
-elif [ -e "VISUAL" ]; then
-    EDITOR="VISUAL"
-else
-    EDITOR="vi"
-fi
-eval "$EDITOR" "$FILE"
-log
-exit $?
+open
