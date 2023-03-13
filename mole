@@ -122,7 +122,7 @@ while getopts "g:a:b:mhd" args; do
     g)
         GROUP=${OPTARG}
         FILE=${OPTARG}
-        [ "$IGNORE" = true ] || { echo >&2 "-g and -d can't be defiend together"; error; }
+        [ "$IGNORE" = true ] || { echo >&2 "-g and -d can't be used together"; error; }
         ;;
     m)
         DIRECTORY=${OPTARG}
