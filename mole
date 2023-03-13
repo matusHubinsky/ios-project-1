@@ -47,12 +47,12 @@ most() {
     if [ -z "$FILTER" ]; then
         # Pokud byl zadán argument -m, tak skript vybere soubor, který byl pomocí skriptu otevřen (editován) nejčastěji.
         # Pokud bude při použití přepínače -m nalezeno více souborů se stejným maximálním počtem otevření, může mole vybrat kterýkoliv z nich.
-        echo "najčastejšie"
+        # echo "najčastejšie"
         awk 'BEGIN{max < ++c[$0]} {max = c[$0]; line = $0} END{print}'
         # uniq -c | sort -bgr
     else
         # Pokud bylo v daném adresáři editováno skriptem více souborů, vybere se soubor, který byl pomocí skriptu otevřen (editován) jako poslední.
-        echo "posledný"
+        # echo "posledný"
         awk 'END{print}'
     fi
 
@@ -106,13 +106,17 @@ else
 fi
 
 # kontrola či je niečo na stdin
-[ -n "$1" ] || error
+[ -n "$1" ] || {
+    cat "$MOLE_RC" | most
+    exit 0
+}
 # kontrola či sa jedná o príkaz alebo otvorenie súbora
 if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
     COMMAND=$1
     shift
 fi
 
+# spracovanie argumentov
 while getopts "g:a:b:mhd" args; do
     case "${args}" in
     h)
@@ -123,8 +127,8 @@ while getopts "g:a:b:mhd" args; do
         GROUP=${OPTARG}
         FILE=${OPTARG}
         [ "$IGNORE" = true ] || {
-            echo >&2 "-g and -d can't be used together"
-            error
+            echo >&2 "error: -g and -d can't be used together"
+            exit 1
         }
         ;;
     m)
@@ -142,30 +146,32 @@ while getopts "g:a:b:mhd" args; do
     a)
         DATE_AFTER=${OPTARG}
         date -d "$DATE_AFTER" >/dev/null 2>&1 || {
-            echo >&2 "Date $DATE_AFTER is not in YYYY-MM-DD format"
+            echo >&2 "error: Date $DATE_AFTER is not in YYYY-MM-DD format"
             exit 1
         }
         ;;
     b)
         DATE_BEFORE=${OPTARG}
         date -d "$DATE_BEFORE" >/dev/null 2>&1 || {
-            echo >&2 "Date $DATE_BEFORE is not in YYYY-MM-DD format"
+            echo >&2 "error: Date $DATE_BEFORE is not in YYYY-MM-DD format"
             exit 1
         }
         ;;
     d)
         IGNORE=true
         [ -z "$GROUP" ] || {
-            echo >&2 "-g and -d can't be used together"
-            error
+            echo >&2 "error: -g and -d can't be used together"
+            exit 1
         }
         ;;
     *)
-        FILE=$1
+        echo >&2 "error: Unknown argumetns!"
+        exit 1
         ;;
     esac
 done
 
+# vykonanie príkazov
 case "$COMMAND" in
 list)
     cat "$MOLE_RC" | date_before | date_after | ignore | sort -u | column -t -o " "
@@ -186,8 +192,8 @@ secret-log)
     ;;
 esac
 
-[ ! -z $FILE ] || FILE=$1
-[ -n "$FILE" ] || error
+# otvorenie súboru
+[ -n "$FILE" ] || FILE=$1
 # look for EDITOR, VISUAL, vi
 if [ -e "EDITOR" ]; then
     EDITOR="EDITOR"
@@ -198,5 +204,4 @@ else
 fi
 eval "$EDITOR" "$FILE"
 log
-echo $?
 exit $?
