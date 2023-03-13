@@ -72,6 +72,14 @@ log() {
     echo "$FILE|$GROUP|$DATE|$(realpath $FILE)" >>"$MOLE_RC"
 }
 
+ignore() {
+    if [ "$IGNORE" = true ]; then
+        awk -F '|' '{if ($2 == "-") print $1": "$2;}'
+    else
+        awk -F '|' '{print $1": "$2}'
+    fi
+}
+
 DATE=$(date +%F_%H-%M-%S)
 DATE_AFTER="0000-00-00"
 DATE_BEFORE="9999-99-99"
@@ -80,6 +88,7 @@ GROUP="-"
 FILTER=""
 DIRECTORY=""
 COMMAND=""
+IGNORE=false
 
 # check if utillity realpath is available
 if ! [ -x "$(command -v realpath)" ]; then
@@ -106,7 +115,7 @@ if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
 fi
 
 
-while getopts "g:a:b:mh" args; do
+while getopts "g:a:b:mhd" args; do
     case "${args}" in
     h)
         print_help
@@ -142,6 +151,9 @@ while getopts "g:a:b:mh" args; do
             exit 1
         fi
         ;;
+    d)
+        IGNORE=true
+        ;;
     *)
         FILE=$1
         ;;
@@ -150,9 +162,8 @@ done
 
 case "$COMMAND" in
 list) # FILE1:  grp1,grp2
-    cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1": "$2}' | sort -u | column -t -o " " | sed -r 's/[,]+/ /g'
-    # cat "$MOLE_RC" | most | sort -u | awk -F '|' '{print $1" "$2" "$3}'
-    exit 0
+    cat "$MOLE_RC" | date_before | date_after | ignore | sort -u | column -t -o " "
+    exit 0  
     ;;
 secret-log) # FILEPATH;DATETIME_1;DATETIME_2;
     [ -e /home/$USER/.mole ] || mkdir /home/$USER/.mole
