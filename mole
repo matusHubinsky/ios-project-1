@@ -69,8 +69,7 @@ date_after() {
 }
 
 log() {
-    PATH=$(realpath $FILE)
-    echo "$FILE|$GROUP|$DATE|$PATH" >>"$MOLE_RC"
+    echo "$FILE|$GROUP|$DATE|$(realpath $FILE)" >>"$MOLE_RC"
 }
 
 DATE=$(date +%F_%H-%M-%S)
@@ -81,7 +80,6 @@ GROUP="-"
 FILTER=""
 DIRECTORY=""
 COMMAND=""
-OUTPUT=""
 
 # check if utillity realpath is available
 if ! [ -x "$(command -v realpath)" ]; then
@@ -104,26 +102,9 @@ fi
 # kontrola či sa jedná o príkaz alebo otvorenie súbora
 if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
     COMMAND=$1
-    echo "command: $COMMAND"
     shift
-else
-    FILE=$1
-    [ -n "$FILE" ] || error
-    # look for EDITOR, VISUAL, vi
-    if [ -e "EDITOR" ]; then
-        EDITOR="EDITOR"
-    elif [ -e "VISUAL" ]; then
-        EDITOR="VISUAL"
-    else
-        EDITOR="vi"
-    fi
-    eval "$EDITOR" "$FILE"
-    log
-    echo $?
-    exit $?
 fi
 
-# set -x
 while getopts "g:a:b:mh" args; do
     case "${args}" in
     h)
@@ -131,11 +112,8 @@ while getopts "g:a:b:mh" args; do
         exit 0
         ;;
     g)
-        # for i in $(echo "$group" | tr "," "\n")
         GROUP=${OPTARG}
         FILE=${OPTARG}
-        log
-        exit 0
         ;;
     m)
         DIRECTORY=${OPTARG}
@@ -164,16 +142,16 @@ while getopts "g:a:b:mh" args; do
         fi
         ;;
     *)
-        echo "some weird args..."
-        exit 1
+        FILE=$1
         ;;
     esac
 done
 
 case "$COMMAND" in
 list) # FILE1:  grp1,grp2
-    cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1": "$2}' | sort -u | column -t -o " "
+    cat "$MOLE_RC" | date_before | date_after | awk -F '|' '{print $1": "$2}' | sort -u | column -t -o " " | sed -r 's/[,]+/ /g'
     # cat "$MOLE_RC" | most | sort -u | awk -F '|' '{print $1" "$2" "$3}'
+    exit 0
     ;;
 secret-log) # FILEPATH;DATETIME_1;DATETIME_2;
     [ -e /home/$USER/.mole ] || mkdir /home/$USER/.mole
@@ -186,7 +164,20 @@ secret-log) # FILEPATH;DATETIME_1;DATETIME_2;
             for (i in arr)
                 printf i";"arr[i]"\n"
         }' | sort | bzip2 -c >/home/$USER/.mole/log_$USER"_"$DATE.bz2
+    exit 0
     ;;
 esac
 
-exit 0
+[ -n "$FILE" ] || error
+# look for EDITOR, VISUAL, vi
+if [ -e "EDITOR" ]; then
+    EDITOR="EDITOR"
+elif [ -e "VISUAL" ]; then
+    EDITOR="VISUAL"
+else
+    EDITOR="vi"
+fi
+eval "$EDITOR" "$FILE"
+log
+echo $?
+exit $?
