@@ -9,6 +9,8 @@ export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
 export LC_COLLATE=C
 
+set -x
+
 print_help() {
     echo "Usage: "
     echo "      mole [-h]"
@@ -26,7 +28,10 @@ print_help() {
 }
 
 check() {
-    [ $(wc -c) -gt "0" ]; echo "error: no files!" >> /dev/stderr; exit 1;
+    if [ $(wc -c) -gt "0" ]; then
+        echo "error: no files found!" >> /dev/stderr
+        exit 1
+    fi 
 }
 
 open() {
@@ -67,7 +72,7 @@ date_after() {
 }
 
 log() {
-    echo "$FILE|$GROUP|$DATE|$(realpath $FILE)" >>"$MOLE_RC"
+    [ -e "$FILE" ] && echo "$FILE|$GROUP|$DATE|$(realpath $FILE)" >>"$MOLE_RC"
 }
 
 ignore() {
@@ -88,8 +93,6 @@ DIRECTORY=""
 COMMAND=""
 IGNORE=false
 
-# set -x
-
 # check if utillity realpath is available
 if ! [ -x "$(command -v realpath)" ]; then
     echo "<realpath> could not be found" >> /dev/stderr
@@ -106,12 +109,17 @@ else
     exit 1
 fi
 
-# kontrola či je niečo na stdin
-[ -n "$1" ] || {
-    FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS="|"} END{print $1}' | check) # uniq -c | sort -bgr |
-    echo "file: $FILE"
-    open
-}
+# Ak je mole spustený bez argumentov, vyberie súbor ktorý bol pomocou skriptu editovaný ako posledný
+if [ $# = 0 ]; then 
+    FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS="|"} END{print $1}') # uniq -c | sort -bgr |
+    [ -e "$FILE" ] || { echo "error: no file!"; exit 1; }
+else 
+    FILE=$1
+    if [ -e "$FILE" ]; then
+        open
+    fi
+fi
+
 # kontrola či sa jedná o príkaz alebo otvorenie súbora
 if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
     COMMAND=$1
