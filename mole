@@ -122,7 +122,10 @@ while getopts "g:a:b:mhd" args; do
     g)
         GROUP=${OPTARG}
         FILE=${OPTARG}
-        [ "$IGNORE" = true ] || { echo >&2 "-g and -d can't be used together"; error; }
+        [ "$IGNORE" = true ] || {
+            echo >&2 "-g and -d can't be used together"
+            error
+        }
         ;;
     m)
         DIRECTORY=${OPTARG}
@@ -138,15 +141,24 @@ while getopts "g:a:b:mhd" args; do
         ;;
     a)
         DATE_AFTER=${OPTARG}
-        date -d "$DATE_AFTER" > /dev/null 2>&1 || { echo >&2 "Date $DATE_AFTER is not in YYYY-MM-DD format"; exit 1; }
+        date -d "$DATE_AFTER" >/dev/null 2>&1 || {
+            echo >&2 "Date $DATE_AFTER is not in YYYY-MM-DD format"
+            exit 1
+        }
         ;;
     b)
         DATE_BEFORE=${OPTARG}
-        date -d "$DATE_BEFORE" > /dev/null 2>&1 || { echo >&2 "Date $DATE_BEFORE is not in YYYY-MM-DD format"; exit 1; }
+        date -d "$DATE_BEFORE" >/dev/null 2>&1 || {
+            echo >&2 "Date $DATE_BEFORE is not in YYYY-MM-DD format"
+            exit 1
+        }
         ;;
     d)
         IGNORE=true
-        [ -z "$GROUP" ] || error "-g and -d can't be defiend together"
+        [ -z "$GROUP" ] || {
+            echo >&2 "-g and -d can't be used together"
+            error
+        }
         ;;
     *)
         FILE=$1
@@ -155,11 +167,11 @@ while getopts "g:a:b:mhd" args; do
 done
 
 case "$COMMAND" in
-list) # FILE1:  grp1,grp2
+list)
     cat "$MOLE_RC" | date_before | date_after | ignore | sort -u | column -t -o " "
-    exit 0  
+    exit 0
     ;;
-secret-log) # FILEPATH;DATETIME_1;DATETIME_2;
+secret-log)
     [ -e /home/$USER/.mole ] || mkdir /home/$USER/.mole
     cat "$MOLE_RC" | date_before | date_after | awk 'BEGIN{FS="|"} {
             if (length(arr[$4]) == 0) 
