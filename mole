@@ -5,6 +5,7 @@
 
 export MOLE_RC=$HOME/.config/molerc
 ROOT=$(realpath "./TEST")
+export EDITOR=touch
 
 export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
@@ -37,14 +38,13 @@ check() {
 
 open() {
     # look for EDITOR, VISUAL, vi
-    if [ -e "EDITOR" ]; then
-        EDITOR="EDITOR"
-    elif [ -e "VISUAL" ]; then
-        EDITOR="VISUAL"
+    if [ "$EDITOR" ]; then
+        eval "$EDITOR" "$FILE"
+    elif [ "$VISUAL" ]; then
+        eval "$VISUAL" "$FILE"
     else
-        EDITOR="vi"
+        eval "vi" "$FILE"
     fi
-    eval "$EDITOR" "$FILE"
     log
     exit $?
 }
@@ -203,7 +203,7 @@ list)
         } END{ 
             for (i in arr)
                 printf i" "arr[i]"\n"
-         }'  | column -t -o " "
+         }'  | column -t -o " " 
     exit 0
     ;;
 secret-log)
