@@ -4,12 +4,13 @@
 #   date:   19.03.2023
 
 export MOLE_RC=$HOME/.config/molerc
+ROOT=$(realpath "./TEST")
 
 export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
 export LC_COLLATE=C
 
-set -x
+# set -x
 
 print_help() {
     echo "Usage: "
@@ -109,13 +110,6 @@ else
     exit 1
 fi
 
-
-# kontrola či sa jedná o príkaz alebo otvorenie súbora
-if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
-    COMMAND=$1
-    shift
-fi
-
  # Ak je mole spustený bez argumentov, vyberie súbor ktorý bol pomocou skriptu editovaný ako posledný
 if [ $# = 0 ]; then 
     FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS="|"} END{print $1}') # uniq -c | sort -bgr |
@@ -126,7 +120,8 @@ fi
 # spracovanie argumentov
 while [ "$#" -gt 0 ]; do
     case "$1" in
-    list | secretlog)
+    list | secret-log)
+        COMMAND=$1
         shift
         ;;
     -h)
@@ -155,7 +150,7 @@ while [ "$#" -gt 0 ]; do
             shift
         # Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
         else
-            :
+            DIRECTORY=""
         fi
         FILTER="m"
         shift
@@ -191,13 +186,7 @@ while [ "$#" -gt 0 ]; do
         ;;
     *)
         FILE=$1
-        if [ -e "$FILE" ]; then
-            open
-        else 
-            echo "error: Unknown argumetns!" >> /dev/stderr
-            exit 1
-        fi
-
+        shift
         ;;
     esac
 done
@@ -205,7 +194,16 @@ done
 # vykonanie príkazov
 case "$COMMAND" in
 list)
-    cat "$MOLE_RC" | date_before | date_after | ignore | sort -u | column -t -o " "
+    IGNORE=false
+    cat "$MOLE_RC" | date_before | date_after | awk -F "|" '{print $1"|"$2}' | ignore | sort -u | awk 'BEGIN{FS=" "} {
+            if (length(arr[$1]) == 0) 
+                arr[$1] = $2;
+            else
+                arr[$1] = arr[$1]","$2;
+        } END{ 
+            for (i in arr)
+                printf i" "arr[i]"\n"
+         }'  | column -t -o " "
     exit 0
     ;;
 secret-log)
@@ -222,8 +220,15 @@ secret-log)
     exit 0
     ;;
 *)
-    FILE=$(cat $MOLE_RC | most | awk -F "|" '{print $1}')
+    if [ -z "$FILE" ]; then 
+        # ak na vstupe nieje zadany subor, vyhladaj posledny editovany
+        FILE=$(cat $MOLE_RC | awk -v file=$FILE 'BEGIN{FS="|"} {
+            if (length(file) == 0) print;
+            else if ( $1 ~ file) print;
+        } ' | most | awk -F "|" '{print $1}')
+    fi
     open 
 esac
 
-
+echo "error: Unknown argumetns!" >> /dev/stderr
+exit 1
