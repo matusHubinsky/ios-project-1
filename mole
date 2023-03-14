@@ -109,21 +109,18 @@ else
     exit 1
 fi
 
-# Ak je mole spustený bez argumentov, vyberie súbor ktorý bol pomocou skriptu editovaný ako posledný
-if [ $# = 0 ]; then 
-    FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS="|"} END{print $1}') # uniq -c | sort -bgr |
-    [ -e "$FILE" ] || { echo "error: no file!"; exit 1; }
-else 
-    FILE=$1
-    if [ -e "$FILE" ]; then
-        open
-    fi
-fi
 
 # kontrola či sa jedná o príkaz alebo otvorenie súbora
 if [ "$1" == "list" ] || [ "$1" == "secret-log" ]; then
     COMMAND=$1
     shift
+fi
+
+ # Ak je mole spustený bez argumentov, vyberie súbor ktorý bol pomocou skriptu editovaný ako posledný
+if [ $# = 0 ]; then 
+    FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS="|"} END{print $1}') # uniq -c | sort -bgr |
+    [ -e "$FILE" ] || { echo "error: no file!"; exit 1; }
+    open
 fi
 
 # spracovanie argumentov
@@ -193,8 +190,14 @@ while [ "$#" -gt 0 ]; do
         shift
         ;;
     *)
-        echo "error: Unknown argumetns!" >> /dev/stderr
-        exit 1
+        FILE=$1
+        if [ -e "$FILE" ]; then
+            open
+        else 
+            echo "error: Unknown argumetns!" >> /dev/stderr
+            exit 1
+        fi
+
         ;;
     esac
 done
@@ -218,8 +221,9 @@ secret-log)
          }' | sort | bzip2 -c >/home/"$USER"/.mole/log_"$USER""_""$DATE".bz2
     exit 0
     ;;
+*)
+    FILE=$(cat $MOLE_RC | most | awk -F "|" '{print $1}')
+    open 
 esac
 
-# otvorenie súboru
-[ -n "$FILE" ] || FILE=$1
-open
+
