@@ -181,6 +181,10 @@ while [ "$#" -gt 0 ]; do
         }
         shift
         ;;
+    -?)        
+        echo "error: Unknown argumetns!" >> /dev/stderr
+        exit 1
+        ;;
     *)
         FILE=$1
         shift
