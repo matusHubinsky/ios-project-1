@@ -62,11 +62,11 @@ most() {
 }
 
 date_before() {
-    awk -F '|' -v date="$DATE_BEFORE" '{if (FNR>1 && $3<date) print}'
+    awk -F '|' -v date="$DATE_BEFORE" '{if ($3<date) print}'
 }
 
 date_after() {
-    awk -F '|' -v date="$DATE_AFTER" '{if (FNR>1 && $3>date) print}'
+    awk -F '|' -v date="$DATE_AFTER" '{if ($3>date) print}'
 }
 
 log() {
