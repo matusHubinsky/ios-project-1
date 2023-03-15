@@ -4,13 +4,10 @@
 #   date:   19.03.2023
 
 export MOLE_RC=$HOME/.config/molerc
-ROOT=$(realpath "./TEST")
 export EDITOR=touch
 
 export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
-export LC_COLLATE=C
-
 # set -x
 
 print_help() {
@@ -203,7 +200,7 @@ list)
         } END{ 
             for (i in arr)
                 printf i" "arr[i]"\n"
-         }'  | column -t -o " " 
+         }' | sort | column -t -o " " | sed -r 's/-,+//g'
     exit 0
     ;;
 secret-log)
@@ -216,7 +213,7 @@ secret-log)
         } END{ 
             for (i in arr)
                 printf i";"arr[i]"\n"
-         }' | sort | bzip2 -c >/home/"$USER"/.mole/log_"$USER""_""$DATE".bz2
+         }' | sort | bzip2 -c > /home/"$USER"/.mole/log_"$USER""_""$DATE".bz2
     exit 0
     ;;
 *)
