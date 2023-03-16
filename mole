@@ -8,7 +8,6 @@ export EDITOR=touch
 
 export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
-# set -x
 
 print_help() {
     echo "Usage: "
@@ -79,6 +78,18 @@ ignore() {
     else
         awk -F '|' '{print $1": "$2}'
     fi
+}
+
+directory() {
+    #awk -v dir=$FILE 'BEGIN{FS="|"} {
+    #    split($4,array,"/");
+    #    printf $4; 
+    #    for (i = 0; i < length(array); i++) 
+    #        printf array[i]" ";
+    #    }' 
+
+    cat $MOLE_RC | awk -v dir=$FILE 'BEGIN{FS="|"} {n=split($4,a,"/"); for (i = 0; i < n; i++) if (a[i] == dir) print $0; }'
+    # | sed -r 's/$FILE+//g'
 }
 
 DATE=$(date +%F_%H-%M-%S)
@@ -192,11 +203,13 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
+# set -x
 # vykonanie príkazov
 case "$COMMAND" in
 list)
     IGNORE=false
-    cat "$MOLE_RC" | date_before | date_after | awk -F "|" '{print $1"|"$2}' | ignore | sort -u | awk 'BEGIN{FS=" "} {
+    cat "$MOLE_RC" | directory | date_before | date_after | awk -F "|" '{print $1" "$2}' | sort -u | \
+        awk 'BEGIN{FS=" "} {
             if (length(arr[$1]) == 0) 
                 arr[$1] = $2;
             else
@@ -204,7 +217,7 @@ list)
         } END{ 
             for (i in arr)
                 printf i" "arr[i]"\n"
-         }' | sort | column -t -o " " | sed -r 's/-,+//g'
+        }' | sort | column -t -o " " | sed -r 's/-,+//g'
     exit 0
     ;;
 secret-log)
