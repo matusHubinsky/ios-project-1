@@ -3,13 +3,13 @@
 #   xlogin: xhubin04
 #   date:   19.03.2023
 
-export MOLE_RC=$HOME/.config/molerc
-export EDITOR=touch
-
 export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
 
 print_help() {
+    echo " " 
+    eval ./cat.sh
+    echo " " 
     echo "Usage: "
     echo "      mole [-h]"
     echo "      mole [FILTERS] [DIRECTORY]"
@@ -81,15 +81,10 @@ ignore() {
 }
 
 directory() {
-    #awk -v dir=$FILE 'BEGIN{FS="|"} {
-    #    split($4,array,"/");
-    #    printf $4; 
-    #    for (i = 0; i < length(array); i++) 
-    #        printf array[i]" ";
-    #    }' 
-
-    cat $MOLE_RC | awk -v dir=$FILE 'BEGIN{FS="|"} {n=split($4,a,"/"); for (i = 0; i < n; i++) if (a[i] == dir) print $0; }'
-    # | sed -r 's/$FILE+//g'
+    cat $MOLE_RC | awk -v dir=$FILE 'BEGIN{FS="|"} { 
+            n = split($4,a,"/"); 
+            if (a[n-1] == dir) print $0; 
+        }' | sed -r "s:${FILE}/::g"
 }
 
 DATE=$(date +%F_%H-%M-%S)
@@ -208,7 +203,7 @@ done
 case "$COMMAND" in
 list)
     IGNORE=false
-    cat "$MOLE_RC" | directory | date_before | date_after | awk -F "|" '{print $1" "$2}' | sort -u | \
+    cat "$MOLE_RC" | directory | date_before | date_after | awk -F "|" '{print $1": "$2}' | sort -u | \
         awk 'BEGIN{FS=" "} {
             if (length(arr[$1]) == 0) 
                 arr[$1] = $2;
