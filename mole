@@ -81,11 +81,11 @@ ignore() {
 }
 
 group() {
-    awk -F '|' -v group="$GROUP" '{if ($2 = group || length(group) == 0) print}'
+    awk -F '|' -v group="$GROUP" '{if ($2==group || group=="-") print}'
 }
 
 directory() {
-    cat $MOLE_RC | awk -v dir=$FILE 'BEGIN{FS="|"} { 
+    awk -v dir=$FILE 'BEGIN{FS="|"} { 
         n = split($4,a,"/"); 
         if (a[n-1] == dir || length(dir) == 0) print;
     }' | sed -r "s:${FILE}/::g"
@@ -228,15 +228,16 @@ list)
     ;;
 secret-log)
     [ -e /home/"$USER"/.mole ] || mkdir "/home/$USER/.mole"
-    cat "$MOLE_RC" | date_before | date_after | awk 'BEGIN{FS="|"} {
-            if (length(arr[$4]) == 0) 
-                arr[$4] = $3;
+    cat "$MOLE_RC" | group | date_before | date_after | directory | awk -F "|" '{print $1": "$2}' | sort -u |
+        awk 'BEGIN{FS=" "} {
+            if (length(arr[$1]) == 0) 
+                arr[$1] = $2;
             else
-                arr[$4] = arr[$4]";"$3;
+                arr[$1] = arr[$1]","$2;
         } END{ 
             for (i in arr)
-                printf i";"arr[i]"\n"
-         }' | sort | bzip2 -c >/home/"$USER"/.mole/log_"$USER""_""$DATE".bz2
+                printf i" "arr[i]"\n"
+        }' | sort | column -t -o " " | sed -r 's/-,+//g'
     exit 0
     ;;
 *)
