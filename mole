@@ -81,7 +81,10 @@ ignore() {
 }
 
 group() {
-    awk -F '|' -v group="$GROUP" '{if ($2==group || group=="-") print}'
+    # TODO: more repetitions
+    for i in $(echo $"$GROUP" | tr "," "\n"); do
+        cat $MOLE_RC | awk -F '|' -v group="$i" '{ if (index($2, group) != 0 || group=="-") print; }'
+    done
 }
 
 directory() {
@@ -214,7 +217,7 @@ done
 case "$COMMAND" in
 list)
     IGNORE=false
-    cat "$MOLE_RC" | group | date_before | date_after | directory | awk -F "|" '{print $1": "$2}' | sort -u |
+    group | date_before | date_after | directory | awk -F "|" '{print $1": "$2}' | sort -u |
         awk 'BEGIN{FS=" "} {
             if (length(arr[$1]) == 0) 
                 arr[$1] = $2;
