@@ -87,21 +87,14 @@ group() {
 }
 
 directory() {
-	awk -v dir=$FILE 'BEGIN{FS="|"} { 
-	n = split($4, in_arr, "/"); 
-	k = split(dir, dir_arr, "/")
-
-		bool = true;
-		for (i = k - 1; i > -1; i--) {
-			if (dir_arr[i] != in_arr[n - (i + 1)]) {
-				bool = false;
-				break;
+	awk -F '|' -v dir="$DIR" '{ 
+		if (index($4, dir)) {
+			n = split($4, in_arr, "/");
+			k = split(dir, dir_arr, "/");
+			if (k == n -1) {
+				print;
 			}
 		}
-		if (bool) {
-			print;
-		}
-	}
 	}' | sed -r "s:${FILE}/::g"
 }
 
@@ -228,30 +221,35 @@ done
 case "$COMMAND" in
 list)
 	IGNORE=false
+	if [ -z "$FILE" ]; then
+		DIR=$(realpath .)
+	else
+		DIR=$(realpath $FILE)
+	fi
 	group | date_before | date_after | directory | awk -F "|" '{print $1": "$2}' | sort -u |
 		awk 'BEGIN{FS=" "} {
-			if (length(arr[$1]) == 0) 
-				arr[$1] = $2;
-			else
-				arr[$1] = arr[$1]","$2;
-		} END{ 
-			for (i in arr)
-				printf i" "arr[i]"\n"
-		}' | sort | column -t -o " " | sed -r 's/-,+//g'
+            if (length(arr[$1]) == 0) 
+                arr[$1] = $2;
+            else
+                arr[$1] = arr[$1]","$2;
+        } END{ 
+            for (i in arr)
+                printf i" "arr[i]"\n"
+        }' | sort | column -t -o " " | sed -r 's/-,+//g'
 	exit 0
 	;;
 secret-log)
 	[ -e /home/"$USER"/.mole ] || mkdir "/home/$USER/.mole"
 	cat "$MOLE_RC" | group | date_before | date_after | directory | awk -F "|" '{print $1": "$2}' | sort -u |
 		awk 'BEGIN{FS=" "} {
-			if (length(arr[$1]) == 0) 
-				arr[$1] = $2;
-			else
-				arr[$1] = arr[$1]","$2;
-		} END{ 
-			for (i in arr)
-				printf i" "arr[i]"\n"
-		}' | sort | column -t -o " " | sed -r 's/-,+//g'
+            if (length(arr[$1]) == 0) 
+                arr[$1] = $2;
+            else
+                arr[$1] = arr[$1]","$2;
+        } END{ 
+            for (i in arr)
+                printf i" "arr[i]"\n"
+        }' | sort | column -t -o " " | sed -r 's/-,+//g'
 	exit 0
 	;;
 *)
