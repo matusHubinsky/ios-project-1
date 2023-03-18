@@ -7,91 +7,102 @@ export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
 
 print_help() {
-    echo " "
-    eval ./cat.sh
-    echo " "
-    echo "Usage: "
-    echo "      mole [-h]"
-    echo "      mole [FILTERS] [DIRECTORY]"
-    echo " "
-    echo "COMMANDS:"
-    echo "      mole list [FILTERS] [DIRECTORY]     opens certain file"
-    echo " "
-    echo "FILTERS:"
-    echo "      [-h]                                prints help"
-    echo "      [-g GROUP1[,GROUP2[,...]]] FILE     add file to a GROUP"
-    echo "      [-m] [FILTERS] [DIRECTORY]          opens the file thah was edited most frequently"
-    echo "      [-a DATE] YYYY-MM-DD                lists all the files edited after certain date"
-    echo "      [-b DATE] YYYY-MM-DD                lists all the files edited begore certain date"
+	echo " "
+	eval ./cat.sh
+	echo " "
+	echo "Usage: "
+	echo "      mole [-h]"
+	echo "      mole [FILTERS] [DIRECTORY]"
+	echo " "
+	echo "COMMANDS:"
+	echo "      mole list [FILTERS] [DIRECTORY]     opens certain file"
+	echo " "
+	echo "FILTERS:"
+	echo "      [-h]                                prints help"
+	echo "      [-g GROUP1[,GROUP2[,...]]] FILE     add file to a GROUP"
+	echo "      [-m] [FILTERS] [DIRECTORY]          opens the file thah was edited most frequently"
+	echo "      [-a DATE] YYYY-MM-DD                lists all the files edited after certain date"
+	echo "      [-b DATE] YYYY-MM-DD                lists all the files edited begore certain date"
 }
 
 check() {
-    if [ $(wc -c) -gt "0" ]; then
-        echo "error: no files found!" >>/dev/stderr
-        exit 1
-    fi
+	if [ $(wc -c) -gt "0" ]; then
+		echo "error: no files found!" >>/dev/stderr
+		exit 1
+	fi
 }
 
 open() {
-    # look for EDITOR, VISUAL, vi
-    if [ "$EDITOR" ]; then
-        eval "$EDITOR" "$FILE"
-    elif [ "$VISUAL" ]; then
-        eval "$VISUAL" "$FILE"
-    else
-        eval "vi" "$FILE"
-    fi
-    log
-    exit $?
+	# look for EDITOR, VISUAL, vi
+	if [ "$EDITOR" ]; then
+		eval "$EDITOR" "$FILE"
+	elif [ "$VISUAL" ]; then
+		eval "$VISUAL" "$FILE"
+	else
+		eval "vi" "$FILE"
+	fi
+	log
+	exit $?
 }
 
 most() {
-    if [ "$FILTER" = "m" ]; then
-        # Pokud byl zadán argument -m, tak skript vybere soubor, který byl pomocí skriptu otevřen (editován) nejčastěji.
-        # Pokud bude při použití přepínače -m nalezeno více souborů se stejným maximálním počtem otevření, může mole vybrat kterýkoliv z nich.
-        # echo "najčastejšie"
-        awk 'BEGIN{max < ++c[$0]} {max = c[$0]; line = $0} END{print}'
-        # uniq -c | sort -bgr
-        # Pokud bylo v daném adresáři editováno skriptem více souborů, vybere se soubor, který byl pomocí skriptu otevřen (editován) jako poslední.
-        # echo "posledný"
-    else
-        awk '{print}'
-    fi
-    # Pokud nebyl v daném adresáři otevřen (editován) ještě žádný soubor, případně žádný soubor nevyhovuje zadaným filtrům, jedná se o chybu.
+	if [ "$FILTER" = "m" ]; then
+		# Pokud byl zadán argument -m, tak skript vybere soubor, který byl pomocí skriptu otevřen (editován) nejčastěji.
+		# Pokud bude při použití přepínače -m nalezeno více souborů se stejným maximálním počtem otevření, může mole vybrat kterýkoliv z nich.
+		# echo "najčastejšie"
+		awk 'BEGIN{max < ++c[$0]} {max = c[$0]; line = $0} END{print}'
+		# uniq -c | sort -bgr
+		# Pokud bylo v daném adresáři editováno skriptem více souborů, vybere se soubor, který byl pomocí skriptu otevřen (editován) jako poslední.
+		# echo "posledný"
+	else
+		awk '{print}'
+	fi
+	# Pokud nebyl v daném adresáři otevřen (editován) ještě žádný soubor, případně žádný soubor nevyhovuje zadaným filtrům, jedná se o chybu.
 }
 
 date_before() {
-    awk -F '|' -v date="$DATE_BEFORE" '{if ($3<date) print}'
+	awk -F '|' -v date="$DATE_BEFORE" '{if ($3<date) print}'
 }
 
 date_after() {
-    awk -F '|' -v date="$DATE_AFTER" '{if ($3>date) print}'
+	awk -F '|' -v date="$DATE_AFTER" '{if ($3>date) print}'
 }
 
 log() {
-    [ -e "$FILE" ] && echo "$FILE|$GROUP|$DATE|$(realpath $FILE)" >>"$MOLE_RC"
+	[ -e "$FILE" ] && echo "$FILE|$GROUP|$DATE|$(realpath $FILE)" >>"$MOLE_RC"
 }
 
 ignore() {
-    if [ "$IGNORE" = true ]; then
-        awk -F '|' '{if ($2 == "-") print $1": "$2;}'
-    else
-        awk -F '|' '{print $1": "$2}'
-    fi
+	if [ "$IGNORE" = true ]; then
+		awk -F '|' '{if ($2 == "-") print $1": "$2;}'
+	else
+		awk -F '|' '{print $1": "$2}'
+	fi
 }
 
 group() {
-    # TODO: more repetitions
-    for i in $(echo $"$GROUP" | tr "," "\n"); do
-        cat $MOLE_RC | awk -F '|' -v group="$i" '{ if (index($2, group) != 0 || group=="-") print; }'
-    done
+	for i in $(echo $"$GROUP" | tr "," "\n"); do
+		cat $MOLE_RC | awk -F '|' -v group="$i" '{ if (index($2, group) != 0 || group=="-") print; }'
+	done
 }
 
 directory() {
-    awk -v dir=$FILE 'BEGIN{FS="|"} { 
-        n = split($4,a,"/"); 
-        if (a[n-1] == dir || length(dir) == 0) print;
-    }' | sed -r "s:${FILE}/::g"
+	awk -v dir=$FILE 'BEGIN{FS="|"} { 
+	n = split($4, in_arr, "/"); 
+	k = split(dir, dir_arr, "/")
+
+		bool = true;
+		for (i = k - 1; i > -1; i--) {
+			if (dir_arr[i] != in_arr[n - (i + 1)]) {
+				bool = false;
+				break;
+			}
+		}
+		if (bool) {
+			print;
+		}
+	}
+	}' | sed -r "s:${FILE}/::g"
 }
 
 DATE=$(date +%F_%H-%M-%S)
@@ -106,153 +117,153 @@ IGNORE=false
 
 # check if utillity realpath is available
 if ! [ -x "$(command -v realpath)" ]; then
-    echo "<realpath> could not be found" >>/dev/stderr
-    exit 1
+	echo "<realpath> could not be found" >>/dev/stderr
+	exit 1
 fi
 
 # look for MOLE_RC, export MOLE_RC=$HOME/.config/molerc
 if [ -n "$MOLE_RC" ]; then
-    if [ ! -e "$MOLE_RC" ]; then
-        touch "${MOLE_RC}"
-    fi
+	if [ ! -e "$MOLE_RC" ]; then
+		touch "${MOLE_RC}"
+	fi
 else
-    echo "MOLE_RC can't be found" >>/dev/stderr
-    exit 1
+	echo "MOLE_RC can't be found" >>/dev/stderr
+	exit 1
 fi
 
 # Ak je mole spustený bez argumentov, vyberie súbor ktorý bol pomocou skriptu editovaný ako posledný
 if [ $# = 0 ]; then
-    FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS="|"} END{print $1}') # uniq -c | sort -bgr |
-    [ -e "$FILE" ] || {
-        echo "error: no file!"
-        exit 1
-    }
-    open
+	FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS="|"} END{print $1}') # uniq -c | sort -bgr |
+	[ -e "$FILE" ] || {
+		echo "error: no file!"
+		exit 1
+	}
+	open
 fi
 
 # spracovanie argumentov
 while [ "$#" -gt 0 ]; do
-    case "$1" in
-    list | secret-log)
-        COMMAND=$1
-        shift
-        ;;
-    -h)
-        print_help
-        exit 0
-        ;;
-    -g)
-        FILTERS+=$1
-        GROUP=$2
-        FILE=$3
-        if [ -n "$FILE" ]; then
-            shift
-        else
-            FILE=""
-        fi
-        [ "$IGNORE" = false ] || {
-            echo "error: -g and -d can't be used together" >>/dev/stderr
-            exit 1
-        }
-        shift
-        shift
-        ;;
-    -m)
-        FILTERS+=$1
-        DIRECTORY=$2
-        # Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
-        if [ -n "$DIRECTORY" ]; then
-            # echo "vonkajší"
-            :
-            shift
-        # Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
-        else
-            DIRECTORY=""
-        fi
-        FILTER="m"
-        shift
-        ;;
-    -a)
-        FILTERS+=$1
-        DATE_AFTER=$2
-        date -d "$DATE_AFTER" >/dev/null 2>&1 || {
-            echo "error: Date $DATE_AFTER is not in YYYY-MM-DD format" >>/dev/stderr
-            exit 1
-        }
-        shift
-        shift
-        ;;
-    -b)
-        FILTERS+=$1
-        DATE_BEFORE=$2
-        date -d "$DATE_BEFORE" >/dev/null 2>&1 || {
-            echo "error: Date $DATE_BEFORE is not in YYYY-MM-DD format" >>/dev/stderr
-            exit 1
-        }
-        shift
-        shift
-        ;;
-    -d)
-        FILTERS+=$1
-        IGNORE=true
-        [ -z "$GROUP" ] || {
-            echo "error: -g and -d can't be used together" >>/dev/stderr
-            exit 1
-        }
-        shift
-        ;;
-    -?)
-        echo "error: Unknown argumetns!" >>/dev/stderr
-        exit 1
-        ;;
-    *)
-        FILE=$1
-        shift
-        ;;
-    esac
+	case "$1" in
+	list | secret-log)
+		COMMAND=$1
+		shift
+		;;
+	-h)
+		print_help
+		exit 0
+		;;
+	-g)
+		FILTERS+=$1
+		GROUP=$2
+		FILE=$3
+		if [ -n "$FILE" ]; then
+			shift
+		else
+			FILE=""
+		fi
+		[ "$IGNORE" = false ] || {
+			echo "error: -g and -d can't be used together" >>/dev/stderr
+			exit 1
+		}
+		shift
+		shift
+		;;
+	-m)
+		FILTERS+=$1
+		DIRECTORY=$2
+		# Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
+		if [ -n "$DIRECTORY" ]; then
+			# echo "vonkajší"
+			:
+			shift
+		# Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
+		else
+			DIRECTORY=""
+		fi
+		FILTER="m"
+		shift
+		;;
+	-a)
+		FILTERS+=$1
+		DATE_AFTER=$2
+		date -d "$DATE_AFTER" >/dev/null 2>&1 || {
+			echo "error: Date $DATE_AFTER is not in YYYY-MM-DD format" >>/dev/stderr
+			exit 1
+		}
+		shift
+		shift
+		;;
+	-b)
+		FILTERS+=$1
+		DATE_BEFORE=$2
+		date -d "$DATE_BEFORE" >/dev/null 2>&1 || {
+			echo "error: Date $DATE_BEFORE is not in YYYY-MM-DD format" >>/dev/stderr
+			exit 1
+		}
+		shift
+		shift
+		;;
+	-d)
+		FILTERS+=$1
+		IGNORE=true
+		[ -z "$GROUP" ] || {
+			echo "error: -g and -d can't be used together" >>/dev/stderr
+			exit 1
+		}
+		shift
+		;;
+	-?)
+		echo "error: Unknown argumetns!" >>/dev/stderr
+		exit 1
+		;;
+	*)
+		FILE=$1
+		shift
+		;;
+	esac
 done
 
 # set -x
 # vykonanie príkazov
 case "$COMMAND" in
 list)
-    IGNORE=false
-    group | date_before | date_after | directory | awk -F "|" '{print $1": "$2}' | sort -u |
-        awk 'BEGIN{FS=" "} {
-            if (length(arr[$1]) == 0) 
-                arr[$1] = $2;
-            else
-                arr[$1] = arr[$1]","$2;
-        } END{ 
-            for (i in arr)
-                printf i" "arr[i]"\n"
-        }' | sort | column -t -o " " | sed -r 's/-,+//g'
-    exit 0
-    ;;
+	IGNORE=false
+	group | date_before | date_after | directory | awk -F "|" '{print $1": "$2}' | sort -u |
+		awk 'BEGIN{FS=" "} {
+			if (length(arr[$1]) == 0) 
+				arr[$1] = $2;
+			else
+				arr[$1] = arr[$1]","$2;
+		} END{ 
+			for (i in arr)
+				printf i" "arr[i]"\n"
+		}' | sort | column -t -o " " | sed -r 's/-,+//g'
+	exit 0
+	;;
 secret-log)
-    [ -e /home/"$USER"/.mole ] || mkdir "/home/$USER/.mole"
-    cat "$MOLE_RC" | group | date_before | date_after | directory | awk -F "|" '{print $1": "$2}' | sort -u |
-        awk 'BEGIN{FS=" "} {
-            if (length(arr[$1]) == 0) 
-                arr[$1] = $2;
-            else
-                arr[$1] = arr[$1]","$2;
-        } END{ 
-            for (i in arr)
-                printf i" "arr[i]"\n"
-        }' | sort | column -t -o " " | sed -r 's/-,+//g'
-    exit 0
-    ;;
+	[ -e /home/"$USER"/.mole ] || mkdir "/home/$USER/.mole"
+	cat "$MOLE_RC" | group | date_before | date_after | directory | awk -F "|" '{print $1": "$2}' | sort -u |
+		awk 'BEGIN{FS=" "} {
+			if (length(arr[$1]) == 0) 
+				arr[$1] = $2;
+			else
+				arr[$1] = arr[$1]","$2;
+		} END{ 
+			for (i in arr)
+				printf i" "arr[i]"\n"
+		}' | sort | column -t -o " " | sed -r 's/-,+//g'
+	exit 0
+	;;
 *)
-    if [ -z "$FILE" ]; then
-        # ak na vstupe nieje zadany subor, vyhladaj posledny editovany
-        FILE=$(cat $MOLE_RC | awk -v file=$FILE 'BEGIN{FS="|"} {
-            if (length(file) == 0) print;
-            else if ( $1 ~ file) print;
-        } ' | most | awk -F "|" '{print $1}')
-    fi
-    open
-    ;;
+	if [ -z "$FILE" ]; then
+		# ak na vstupe nieje zadany subor, vyhladaj posledny editovany
+		FILE=$(cat $MOLE_RC | awk -v file=$FILE 'BEGIN{FS="|"} {
+			if (length(file) == 0) print;
+			else if ( $1 ~ file) print;
+		} ' | most | awk -F "|" '{print $1}')
+	fi
+	open
+	;;
 esac
 
 echo "error: Unknown argumetns!" >>/dev/stderr
