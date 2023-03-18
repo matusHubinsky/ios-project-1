@@ -7,9 +7,7 @@ export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
 
 print_help() {
-	echo " "
-	eval ./cat.sh
-	echo " "
+	[ -e ./cat.sh ] && eval ./cat.sh
 	echo "Usage: "
 	echo "      mole [-h]"
 	echo "      mole [FILTERS] [DIRECTORY]"
