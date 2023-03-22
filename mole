@@ -6,7 +6,7 @@
 export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
 
-print_help() {
+function print_help() {
 	[ -e ./cat.sh ] && eval ./cat.sh
 	echo "Usage: "
 	echo "      mole [-h]"
@@ -23,14 +23,14 @@ print_help() {
 	echo "      [-b DATE] YYYY-MM-DD                lists all the files edited begore certain date"
 }
 
-check() {
+function check() {
 	if [ $(wc -c) -gt "0" ]; then
 		echo "error: no files found!" >>/dev/stderr
 		exit 1
 	fi
 }
 
-open() {
+function open() {
 	# look for EDITOR, VISUAL, vi
 	if [ "$EDITOR" ]; then
 		eval "$EDITOR" "$FILE"
@@ -43,7 +43,7 @@ open() {
 	exit $?
 }
 
-most() {
+function most() {
 	if [ "$FILTER" = "m" ]; then
 		# Pokud byl zadán argument -m, tak skript vybere soubor, který byl pomocí skriptu otevřen (editován) nejčastěji.
 		# Pokud bude při použití přepínače -m nalezeno více souborů se stejným maximálním počtem otevření, může mole vybrat kterýkoliv z nich.
@@ -58,34 +58,34 @@ most() {
 	# Pokud nebyl v daném adresáři otevřen (editován) ještě žádný soubor, případně žádný soubor nevyhovuje zadaným filtrům, jedná se o chybu.
 }
 
-date_before() {
-	awk -F '|' -v date="$DATE_BEFORE" '{if ($3<date) print}'
+function date_before() {
+	awk -F ':' -v date="$DATE_BEFORE" '{if ($3<date) print}'
 }
 
-date_after() {
-	awk -F '|' -v date="$DATE_AFTER" '{if ($3>date) print}'
+function date_after() {
+	awk -F ':' -v date="$DATE_AFTER" '{if ($3>date) print}'
 }
 
-log() {
-	[ -e "$FILE" ] && echo "$FILE|$GROUP|$DATE|$(realpath $FILE)" >>"$MOLE_RC"
+function log() {
+	[ -e "$FILE" ] && echo "$FILE:$GROUP:$DATE:$(realpath $FILE)" >>"$MOLE_RC"
 }
 
-ignore() {
+function ignore() {
 	if [ "$IGNORE" = true ]; then
-		awk -F '|' '{if ($2 == "-") print $1": "$2;}'
+		awk -F ':' '{if ($2 == "-") print $1": "$2;}'
 	else
-		awk -F '|' '{print $1": "$2}'
+		awk -F ':' '{print $1": "$2}'
 	fi
 }
 
-group() {
+function group() {
 	for i in $(echo $"$GROUP" | tr "," "\n"); do
-		cat $MOLE_RC | awk -F '|' -v group="$i" '{ if (index($2, group) != 0 || group=="-") print; }'
+		cat $MOLE_RC | awk -F ':' -v group="$i" '{ if (index($2, group) != 0 || group=="-") print; }'
 	done
 }
 
-directory() {
-	awk -F '|' -v dir="$DIR" '{ 
+function directory() {
+	awk -F ':' -v dir="$DIR" '{ 
 		if (index($4, dir)) {
 			n = split($4, in_arr, "/");
 			k = split(dir, dir_arr, "/");
@@ -124,7 +124,7 @@ fi
 
 # Ak je mole spustený bez argumentov, vyberie súbor ktorý bol pomocou skriptu editovaný ako posledný
 if [ $# = 0 ]; then
-	FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS="|"} END{print $1}') # uniq -c | sort -bgr |
+	FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS=":"} END{print $1}') # uniq -c | sort -bgr |
 	[ -e "$FILE" ] || {
 		echo "error: no file!"
 		exit 1
@@ -224,7 +224,7 @@ list)
 	else
 		DIR=$(realpath $FILE)
 	fi
-	group | date_before | date_after | directory | awk -F "|" '{print $1": "$2}' | sort -u |
+	group | date_before | date_after | directory | awk -F ":" '{print $1": "$2}' | sort -u |
 		awk 'BEGIN{FS=" "} {
             if (length(arr[$1]) == 0) 
                 arr[$1] = $2;
@@ -238,7 +238,7 @@ list)
 	;;
 secret-log)
 	[ -e /home/"$USER"/.mole ] || mkdir "/home/$USER/.mole"
-	cat "$MOLE_RC" | date_before | date_after | awk 'BEGIN{FS="|"} {
+	cat "$MOLE_RC" | date_before | date_after | awk 'BEGIN{FS=":"} {
             if (length(arr[$4]) == 0) 
                 arr[$4] = $3;
             else
@@ -252,10 +252,10 @@ secret-log)
 *)
 	if [ -z "$FILE" ]; then
 		# ak na vstupe nieje zadany subor, vyhladaj posledny editovany
-		FILE=$(cat $MOLE_RC | awk -v file=$FILE 'BEGIN{FS="|"} {
+		FILE=$(cat $MOLE_RC | awk -v file=$FILE 'BEGIN{FS=":"} {
 			if (length(file) == 0) print;
 			else if ( $1 ~ file) print;
-		} ' | most | awk -F "|" '{print $1}')
+		} ' | most | awk -F ":" '{print $1}')
 	fi
 	open
 	;;
