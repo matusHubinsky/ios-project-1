@@ -1,7 +1,7 @@
 #!/bin/bash
 #   author: Matus Hubinsky
 #   xlogin: xhubin04
-#   date:   19.03.2023
+#   date:   18.03.2023
 
 export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
@@ -18,7 +18,7 @@ print_help() {
 	echo "FILTERS:"
 	echo "      [-h]                                prints help"
 	echo "      [-g GROUP1[,GROUP2[,...]]] FILE     add file to a GROUP"
-	echo "      [-m] [FILTERS] [DIRECTORY]          opens the file thah was edited most frequently"
+	echo "      [-m] [FILTERS] [DIRECTORY]            opens the file thah was edited most frequently"
 	echo "      [-a DATE] YYYY-MM-DD                lists all the files edited after certain date"
 	echo "      [-b DATE] YYYY-MM-DD                lists all the files edited begore certain date"
 }
@@ -197,7 +197,7 @@ while [ "$#" -gt 0 ]; do
 	-d)
 		FILTERS+=$1
 		IGNORE=true
-		[ -z "$GROUP" ] || {
+		[ "$GROUP" = "-" ] || {
 			echo "error: -g and -d can't be used together" >>/dev/stderr
 			exit 1
 		}
@@ -238,16 +238,15 @@ list)
 	;;
 secret-log)
 	[ -e /home/"$USER"/.mole ] || mkdir "/home/$USER/.mole"
-	cat "$MOLE_RC" | group | date_before | date_after | directory | awk -F "|" '{print $1": "$2}' | sort -u |
-		awk 'BEGIN{FS=" "} {
-            if (length(arr[$1]) == 0) 
-                arr[$1] = $2;
+	cat "$MOLE_RC" | date_before | date_after | awk 'BEGIN{FS="|"} {
+            if (length(arr[$4]) == 0) 
+                arr[$4] = $3;
             else
-                arr[$1] = arr[$1]","$2;
+                arr[$4] = arr[$4]";"$3;
         } END{ 
             for (i in arr)
-                printf i" "arr[i]"\n"
-        }' | sort | column -t -o " " | sed -r 's/-,+//g'
+                printf i";"arr[i]"\n"
+         }' | sort | bzip2 -c >/home/"$USER"/.mole/log_"$USER""_""$DATE".bz2
 	exit 0
 	;;
 *)
@@ -261,6 +260,3 @@ secret-log)
 	open
 	;;
 esac
-
-echo "error: Unknown argumetns!" >>/dev/stderr
-exit 1
