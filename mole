@@ -86,7 +86,7 @@ function directory() {
 				print;
 			}
 		}
-	}' | sed -r "s:${FILE}/::g"
+	}'
 }
 
 function log_is_not_empty() {
@@ -157,13 +157,17 @@ while [ "$#" -gt 0 ]; do
 		DIRECTORY=$2
 		RESULT=$(echo "$DIRECTORY" | awk '{ print index($0,"-"); }')
 		if [ "$RESULT" != 0 ]; then
+			DIRECTORY=""
 			shift
 			continue
 		else
 			if [ -n "$DIRECTORY" ]; then
-				[ -d "$DIRECTORY" ] || error "directory '$DIRECTORY' doesn't exist"
 				# Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
-				shift
+				if [ -d "$DIRECTORY" ] && ! [ -f "$DIRECTORY" ]; then
+					shift
+				else
+					error "directory '$DIRECTORY' doesn't exist"
+				fi
 			else
 				# Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
 				DIRECTORY=""
@@ -203,16 +207,19 @@ while [ "$#" -gt 0 ]; do
 	esac
 done
 
+if [ ! -z "$DIRECTORY" ]; then
+	:
+elif [ -z "$FILE" ]; then
+	DIR=$(realpath .)
+else
+	DIR=$(realpath $FILE)
+fi
+
 # vykonanie príkazov
 case "$COMMAND" in
 list)
 	IGNORE=false
-	if [ -z "$FILE" ]; then
-		DIR=$(realpath .)
-	else
-		DIR=$(realpath $FILE)
-	fi
-	group | date_before | date_after | directory | awk -F ":" '{print $1": "$2}' | sort -u |
+	group | date_before | date_after | directory | sed -r "s:${FILE}/::g" | awk -F ":" '{print $1": "$2}' | sort -u |
 		awk 'BEGIN{FS=" "} {
             if (length(arr[$1]) == 0) 
                 arr[$1] = $2;
@@ -239,15 +246,16 @@ secret-log)
 	;;
 *)
 	if [ -z "$FILE" ]; then
-		# ak na vstupe nieje zadany subor, vyhladaj posledny editovany
-		RESOULT=$(FILE=$(cat $MOLE_RC | awk -v file=$FILE 'BEGIN{FS=":"} {
+		# pokud byl zadán argument -m, tak skript vybere soubor, který byl pomocí skriptu otevřen (editován) nejčastěji.
+		FILE=$(group | date_before | date_after | directory | awk -v file=$FILE 'BEGIN{FS=":"} {
 			if (length(file) == 0) print;
 			else if ( $1 ~ file) print;
-		} ' | most | awk -F ":" '{print $1}'))
-		if [ -z "$RESOULT" ]; then
+		} ' | most | awk -F ":" '{print $1}')
+
+		if [ -z "$FILE" ]; then
 			error "No files match the filters"
 		else
-			echo "$RESOULT"
+			echo "$FILE"
 		fi
 	fi
 	open
