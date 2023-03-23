@@ -6,8 +6,6 @@
 export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
 
-set -x
-
 function print_help() {
 	[ -e ./cat.sh ] && eval ./cat.sh
 	echo "Usage: "
@@ -112,10 +110,7 @@ COMMAND=""
 IGNORE=false
 
 # check if utillity realpath is available
-if ! [ -x "$(command -v realpath)" ]; then
-	echo "<realpath> could not be found" >>/dev/stderr
-	exit 1
-fi
+[ -x "$(command -v realpath)" ] || error "<realpath> could not be found"
 
 # look for MOLE_RC, export MOLE_RC=$HOME/.config/molerc
 if [ -n "$MOLE_RC" ]; then
@@ -123,17 +118,13 @@ if [ -n "$MOLE_RC" ]; then
 		touch "${MOLE_RC}"
 	fi
 else
-	echo "MOLE_RC can't be found" >>/dev/stderr
-	exit 1
+	error "MOLE_RC can't be found"
 fi
 
 # Ak je mole spustený bez argumentov, vyberie súbor ktorý bol pomocou skriptu editovaný ako posledný
 if [ $# = 0 ]; then
 	FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS=":"} END{print $1}') # uniq -c | sort -bgr |
-	[ -e "$FILE" ] || {
-		echo "error: no file!"
-		exit 1
-	}
+	[ -e "$FILE" ] || error "no file!"
 	open
 fi
 
@@ -157,10 +148,7 @@ while [ "$#" -gt 0 ]; do
 		else
 			FILE=""
 		fi
-		[ "$IGNORE" = false ] || {
-			echo "error: -g and -d can't be used together" >>/dev/stderr
-			exit 1
-		}
+		[ "$IGNORE" = false ] || error "-g and -d can't be used together"
 		shift
 		shift
 		;;
@@ -168,9 +156,7 @@ while [ "$#" -gt 0 ]; do
 		FILTERS+=$1
 		DIRECTORY=$2
 		if [ -n "$DIRECTORY" ]; then
-			if [ ! -d "$DIRECTORY" ]; then
-				error "$DIRECTORY doesn't exist"
-			fi
+			[ -d "$DIRECTORY" ] || error "directory '$DIRECTORY' doesn't exist"
 			# Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
 			shift
 		else
@@ -183,35 +169,25 @@ while [ "$#" -gt 0 ]; do
 	-a)
 		FILTERS+=$1
 		DATE_AFTER=$2
-		date -d "$DATE_AFTER" >/dev/null 2>&1 || {
-			echo "error: Date $DATE_AFTER is not in YYYY-MM-DD format" >>/dev/stderr
-			exit 1
-		}
+		date -d "$DATE_AFTER" >/dev/null 2>&1 || error "Date $DATE_AFTER is not in YYYY-MM-DD format"
 		shift
 		shift
 		;;
 	-b)
 		FILTERS+=$1
 		DATE_BEFORE=$2
-		date -d "$DATE_BEFORE" >/dev/null 2>&1 || {
-			echo "error: Date $DATE_BEFORE is not in YYYY-MM-DD format" >>/dev/stderr
-			exit 1
-		}
+		date -d "$DATE_BEFORE" >/dev/null 2>&1 || error "Date $DATE_BEFORE is not in YYYY-MM-DD format"
 		shift
 		shift
 		;;
 	-d)
 		FILTERS+=$1
 		IGNORE=true
-		[ "$GROUP" = "-" ] || {
-			echo "error: -g and -d can't be used together" >>/dev/stderr
-			exit 1
-		}
+		[ "$GROUP" = "-" ] || error "-g and -d can't be used together"
 		shift
 		;;
 	-?)
-		echo "error: Unknown argumetns!" >>/dev/stderr
-		exit 1
+		error "Unknown argumetns!"
 		;;
 	*)
 		FILE=$1
