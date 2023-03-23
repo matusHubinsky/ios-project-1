@@ -37,7 +37,6 @@ function open() {
 	else
 		eval "vi" "$FILE"
 	fi
-	log
 	exit $?
 }
 
@@ -125,6 +124,7 @@ fi
 if [ $# = 0 ]; then
 	FILE=$(cat "$MOLE_RC" | awk 'BEGIN{FS=":"} END{print $1}') # uniq -c | sort -bgr |
 	[ -e "$FILE" ] || error "no file!"
+	log
 	open
 fi
 
@@ -247,17 +247,19 @@ secret-log)
 *)
 	if [ -z "$FILE" ]; then
 		# pokud byl zadán argument -m, tak skript vybere soubor, který byl pomocí skriptu otevřen (editován) nejčastěji.
-		FILE=$(group | date_before | date_after | directory | awk -v file=$FILE 'BEGIN{FS=":"} {
-			if (length(file) == 0) print;
-			else if ( $1 ~ file) print;
-		} ' | most | awk -F ":" '{print $1}')
-
+		FILE=$(
+			group | date_before | date_after | directory | awk -v file=$FILE 'BEGIN{FS=":"} {
+				if (length(file) == 0) print;
+				else if ( $1 ~ file) print;
+			} ' | most | awk -F ":" '{print $1;}'
+		)
 		if [ -z "$FILE" ]; then
 			error "No files match the filters"
 		else
-			echo "$FILE"
+			FILE=$(echo "$FILE" | tail -n 1)
 		fi
 	fi
+	log
 	open
 	;;
 esac
