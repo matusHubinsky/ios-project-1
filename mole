@@ -6,6 +6,8 @@
 export POSIXLY_CORRECT=yes
 export LC_NUMERIC=en_US.UTF-8
 
+set -x
+
 function print_help() {
 	[ -e ./cat.sh ] && eval ./cat.sh
 	echo "Usage: "
@@ -18,15 +20,21 @@ function print_help() {
 	echo "FILTERS:"
 	echo "      [-h]                                prints help"
 	echo "      [-g GROUP1[,GROUP2[,...]]] FILE     add file to a GROUP"
-	echo "      [-m] [FILTERS] [DIRECTORY]            opens the file thah was edited most frequently"
+	echo "      [-m] [FILTERS] [DIRECTORY]          opens the file thah was edited most frequently"
 	echo "      [-a DATE] YYYY-MM-DD                lists all the files edited after certain date"
 	echo "      [-b DATE] YYYY-MM-DD                lists all the files edited begore certain date"
 }
 
+function error() {
+	echo "Error:" "$@" 1>&2
+	exit 1
+}
+
 function check() {
-	if [ $(wc -c) -gt "0" ]; then
-		echo "error: no files found!" >>/dev/stderr
-		exit 1
+	if [ $(grep .) ]; then
+		echo "$0"
+	else
+		error "empty"
 	fi
 }
 
@@ -44,18 +52,15 @@ function open() {
 }
 
 function most() {
+	# TODO:  Pokud nebyl v daném adresáři otevřen (editován) ještě žádný soubor, případně žádný soubor nevyhovuje zadaným filtrům, jedná se o chybu.
+	# cat $MOLE_RC | directory | check
 	if [ "$FILTER" = "m" ]; then
-		# Pokud byl zadán argument -m, tak skript vybere soubor, který byl pomocí skriptu otevřen (editován) nejčastěji.
-		# Pokud bude při použití přepínače -m nalezeno více souborů se stejným maximálním počtem otevření, může mole vybrat kterýkoliv z nich.
 		# echo "najčastejšie"
 		awk 'BEGIN{max < ++c[$0]} {max = c[$0]; line = $0} END{print}'
-		# uniq -c | sort -bgr
-		# Pokud bylo v daném adresáři editováno skriptem více souborů, vybere se soubor, který byl pomocí skriptu otevřen (editován) jako poslední.
-		# echo "posledný"
 	else
+		# echo "posledný"
 		awk '{print}'
 	fi
-	# Pokud nebyl v daném adresáři otevřen (editován) ještě žádný soubor, případně žádný soubor nevyhovuje zadaným filtrům, jedná se o chybu.
 }
 
 function date_before() {
@@ -162,13 +167,14 @@ while [ "$#" -gt 0 ]; do
 	-m)
 		FILTERS+=$1
 		DIRECTORY=$2
-		# Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
 		if [ -n "$DIRECTORY" ]; then
-			# echo "vonkajší"
-			:
+			if [ ! -d "$DIRECTORY" ]; then
+				error "$DIRECTORY doesn't exist"
+			fi
+			# Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
 			shift
-		# Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
 		else
+			# Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
 			DIRECTORY=""
 		fi
 		FILTER="m"
