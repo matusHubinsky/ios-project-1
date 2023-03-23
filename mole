@@ -155,13 +155,18 @@ while [ "$#" -gt 0 ]; do
 	-m)
 		FILTERS+=$1
 		DIRECTORY=$2
-		if [ -n "$DIRECTORY" ]; then
-			[ -d "$DIRECTORY" ] || error "directory '$DIRECTORY' doesn't exist"
-			# Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
-			shift
+		RESULT=$(echo "$DIRECTORY" | awk '{ print index($0,"-"); }')
+		if [ "$RESULT" != 0 ]; then
+			:
 		else
-			# Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
-			DIRECTORY=""
+			if [ -n "$DIRECTORY" ]; then
+				[ -d "$DIRECTORY" ] || error "directory '$DIRECTORY' doesn't exist"
+				# Pokud DIRECTORY odpovídá existujícímu adresáři, skript z daného adresáře vybere soubor, který má být otevřen.
+				shift
+			else
+				# Pokud nebyl zadán adresář, předpokládá se aktuální adresář.
+				DIRECTORY=""
+			fi
 		fi
 		FILTER="m"
 		shift
