@@ -28,14 +28,6 @@ function error() {
 	exit 1
 }
 
-function check() {
-	if [ $(grep .) ]; then
-		echo "$0"
-	else
-		error "empty"
-	fi
-}
-
 function open() {
 	# look for EDITOR, VISUAL, vi
 	if [ "$EDITOR" ]; then
@@ -50,8 +42,6 @@ function open() {
 }
 
 function most() {
-	# TODO:  Pokud nebyl v daném adresáři otevřen (editován) ještě žádný soubor, případně žádný soubor nevyhovuje zadaným filtrům, jedná se o chybu.
-	# cat $MOLE_RC | directory | check
 	if [ "$FILTER" = "m" ]; then
 		# echo "najčastejšie"
 		awk 'BEGIN{max < ++c[$0]} {max = c[$0]; line = $0} END{print}'
@@ -97,6 +87,16 @@ function directory() {
 			}
 		}
 	}' | sed -r "s:${FILE}/::g"
+}
+
+function log_is_not_empty() {
+	# Pokud nebyl v daném adresáři otevřen (editován) ještě žádný soubor, jedná se o chybu
+	if [ -z "$DIRECTORY" ]; then
+		DIR=$(realpath .)
+	else
+		DIR=$(realpath $DIRECTORY)
+	fi
+	[ -z "$(cat $MOLE_RC | directory)" ] && error "No files were edited in this directory"
 }
 
 DATE=$(date +%F_%H-%M-%S)
@@ -157,7 +157,8 @@ while [ "$#" -gt 0 ]; do
 		DIRECTORY=$2
 		RESULT=$(echo "$DIRECTORY" | awk '{ print index($0,"-"); }')
 		if [ "$RESULT" != 0 ]; then
-			:
+			shift
+			continue
 		else
 			if [ -n "$DIRECTORY" ]; then
 				[ -d "$DIRECTORY" ] || error "directory '$DIRECTORY' doesn't exist"
@@ -170,6 +171,7 @@ while [ "$#" -gt 0 ]; do
 		fi
 		FILTER="m"
 		shift
+		log_is_not_empty
 		;;
 	-a)
 		FILTERS+=$1
@@ -201,7 +203,6 @@ while [ "$#" -gt 0 ]; do
 	esac
 done
 
-# set -x
 # vykonanie príkazov
 case "$COMMAND" in
 list)
@@ -239,10 +240,15 @@ secret-log)
 *)
 	if [ -z "$FILE" ]; then
 		# ak na vstupe nieje zadany subor, vyhladaj posledny editovany
-		FILE=$(cat $MOLE_RC | awk -v file=$FILE 'BEGIN{FS=":"} {
+		RESOULT=$(FILE=$(cat $MOLE_RC | awk -v file=$FILE 'BEGIN{FS=":"} {
 			if (length(file) == 0) print;
 			else if ( $1 ~ file) print;
-		} ' | most | awk -F ":" '{print $1}')
+		} ' | most | awk -F ":" '{print $1}'))
+		if [ -z "$RESOULT" ]; then
+			error "No files match the filters"
+		else
+			echo "$RESOULT"
+		fi
 	fi
 	open
 	;;
